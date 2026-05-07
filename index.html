@@ -10,6 +10,7 @@
 <meta name="description" content="Розрахунок податків при продажу нерухомості в Україні 2026">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@700;800&display=swap" rel="stylesheet">
@@ -424,10 +425,10 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
       <span class="save-icon">📄</span> PDF
     </button>
     <button class="save-btn" id="btn-share" type="button">
-      <span class="save-icon">📤</span> Поділитись
+      <span class="save-icon">📤</span> Текст
     </button>
-    <button class="save-btn save-btn-outline" id="btn-screenshot" type="button">
-      <span class="save-icon">📸</span> Скріншот
+    <button class="save-btn" id="btn-image" type="button">
+      <span class="save-icon">🖼</span> Картинка
     </button>
   </div>
 
@@ -563,7 +564,7 @@ window.addEventListener('load',()=>{
   // Кнопки дій — прив'язуємо тут щоб уникнути блокування браузером
   document.getElementById('btn-pdf').addEventListener('click',savePDF);
   document.getElementById('btn-share').addEventListener('click',shareResult);
-  document.getElementById('btn-screenshot').addEventListener('click',saveScreenshot);
+  document.getElementById('btn-image').addEventListener('click',generateImage);
 });
 
 
@@ -916,6 +917,88 @@ function toggleRates(){
   btn.classList.toggle('open',isOpen);
   if(isOpen)buildRatesTable();
 }
+function generateImage(){
+  const base=getCurrentBase();
+  if(!base){showToast('Спочатку введіть суму угоди');return}
+
+  // Будуємо красивий блок для знімку
+  const date=new Date().toLocaleDateString('uk-UA');
+  const rb=document.getElementById('result-block');
+  const resultHTML=rb.innerHTML;
+
+  const wrapper=document.createElement('div');
+  wrapper.style.cssText='position:fixed;left:-9999px;top:0;width:380px;background:#fff;padding:0;font-family:Arial,sans-serif;z-index:-1';
+
+  wrapper.innerHTML=`<div style="background:#1B2B5E;padding:16px 20px">
+      <div style="font-size:15px;font-weight:700;color:#fff;letter-spacing:.12em">ЕКСПЕРТНА ДУМКА</div>
+      <div style="font-size:10px;color:#A0B4E8;margin-top:2px">Оцінка нерухомості · Житомир</div>
+    </div>
+    <div style="padding:14px 16px;background:#F4F6FB;border-bottom:1px solid #E2E8F0">
+      <div style="font-size:13px;font-weight:700;color:#1B2B5E">Розрахунок податків при продажу нерухомості</div>
+      <div style="font-size:11px;color:#94A3B8;margin-top:2px">${date}</div>
+    </div>
+    <div style="padding:14px 16px">${resultHTML}</div>
+    <div style="background:#1B2B5E;padding:10px 16px;display:flex;justify-content:space-between;align-items:center">
+      <div style="font-size:10px;color:#A0B4E8">📞 +38 097 921 3772</div>
+      <div style="font-size:9px;color:#64748B">⚠️ Орієнтовний розрахунок</div>
+    </div>`;
+
+  document.body.appendChild(wrapper);
+
+  // Тимчасово застосуємо стилі калькулятора до wrapper
+  const styleLink=document.createElement('style');
+  styleLink.textContent=`
+    .obj-block{background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:10px;margin-bottom:8px}
+    .obj-title{font-size:12px;font-weight:700;color:#1B2B5E;margin-bottom:6px}
+    .sale-badge{font-size:10px;background:#EBF4FF;color:#185FA5;padding:2px 6px;border-radius:3px;margin-left:4px}
+    .result-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+    .rcard{background:#fff;border:1px solid #E2E8F0;border-radius:6px;padding:8px}
+    .rl{font-size:10px;color:#94A3B8;margin-bottom:2px}
+    .rv{font-size:13px;font-weight:700;color:#1B2B5E}
+    .total-box{background:#1B2B5E;border-radius:8px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+    .tl{font-size:11px;font-weight:600;color:#A0B4E8}
+    .tc{font-size:10px;color:#A0B4E8}
+    .tv{font-size:18px;font-weight:700;color:#F0C040}
+    .extra-box{background:#FFF8E7;border:1px solid #FDE68A;border-radius:8px;padding:10px;margin-top:8px}
+    .extra-title{font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;margin-bottom:6px}
+    .extra-item{display:flex;justify-content:space-between;font-size:11px;padding:3px 0;border-bottom:1px solid #FDE68A}
+    .extra-lbl{color:#64748B}
+    .extra-val{font-weight:700;color:#1B2B5E}
+    .extra-total{display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:#1B2B5E;padding-top:6px;margin-top:2px}
+    .zero-box{background:#DCFCE7;border-radius:8px;padding:12px;text-align:center;font-size:14px;font-weight:700;color:#15803D}
+    .note{background:#FEF3C7;border-left:3px solid #F59E0B;padding:8px 10px;font-size:11px;color:#92400E;font-weight:500;margin-top:8px;border-radius:0 6px 6px 0}
+    .section-label{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#94A3B8;margin-bottom:8px}
+  `;
+  wrapper.appendChild(styleLink);
+
+  showToast('⏳ Створюємо зображення...');
+
+  html2canvas(wrapper,{
+    scale:2,
+    backgroundColor:'#ffffff',
+    logging:false,
+    useCORS:true,
+    allowTaint:true
+  }).then(canvas=>{
+    document.body.removeChild(wrapper);
+    canvas.toBlob(blob=>{
+      if(!blob){showToast('Помилка створення зображення');return}
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');
+      a.href=url;
+      a.download='rozrakhunok_podatkiv.png';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(()=>URL.revokeObjectURL(url),1000);
+      showToast('✓ Зображення збережено! Відправ через Viber');
+    },'image/png');
+  }).catch(()=>{
+    document.body.removeChild(wrapper);
+    showToast('Помилка. Спробуй зробити скріншот екрану');
+  });
+}
+
 window._recalcRates=function(){if(document.getElementById('rates-body').classList.contains('open'))buildRatesTable()};
 
 calc();
