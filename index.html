@@ -1090,14 +1090,80 @@ function savePDF(){
   }
 }
 
+function buildShareText(){
+  const date=new Date().toLocaleDateString('uk-UA');
+  const rb=document.getElementById('result-block');
+  let lines=[];
+  lines.push('📊 РОЗРАХУНОК ПОДАТКІВ ПРИ ПРОДАЖУ НЕРУХОМОСТІ');
+  lines.push('🗓 Дата: '+date);
+  lines.push('━━━━━━━━━━━━━━━━━━━━');
+
+  // Об'єкти
+  const objBlocks=rb.querySelectorAll('.obj-block');
+  if(objBlocks.length>0){
+    objBlocks.forEach((block,i)=>{
+      const titleEl=block.querySelector('.obj-title');
+      const badge=block.querySelector('.sale-badge');
+      const cards=block.querySelectorAll('.rcard');
+      const noteEl=block.querySelector('div[style*="color:#16A34A"]');
+      const titleText=titleEl?(titleEl.innerText.replace(badge?badge.innerText:'','').trim()):'';
+      const badgeText=badge?badge.innerText:'';
+      lines.push('');
+      lines.push((i+1)+'. '+titleText);
+      lines.push('   '+badgeText);
+      cards.forEach(c=>{
+        const l=c.querySelector('.rl'),v=c.querySelector('.rv');
+        if(l&&v) lines.push('   '+l.innerText+': '+v.innerText);
+      });
+      if(noteEl) lines.push('   ✓ '+noteEl.innerText.trim());
+    });
+  } else {
+    // Квартира
+    const rcards=rb.querySelectorAll('.rcard');
+    lines.push('');
+    rcards.forEach(c=>{
+      const l=c.querySelector('.rl'),v=c.querySelector('.rv');
+      if(l&&v) lines.push('   '+l.innerText+': '+v.innerText);
+    });
+  }
+
+  // Підсумок
+  const totalBox=rb.querySelector('.total-box');
+  if(totalBox){
+    const tv=totalBox.querySelector('.tv'),tc=totalBox.querySelector('.tc');
+    lines.push('');
+    lines.push('━━━━━━━━━━━━━━━━━━━━');
+    lines.push('💰 ПОДАТКИ РАЗОМ: '+(tv?tv.innerText:''));
+    if(tc) lines.push('   '+tc.innerText);
+  }
+
+  // Додаткові витрати
+  const extraBox=rb.querySelector('.extra-box');
+  if(extraBox){
+    lines.push('');
+    lines.push('📋 ДОДАТКОВІ ВИТРАТИ:');
+    const rows=extraBox.querySelectorAll('.extra-item');
+    rows.forEach(r=>{
+      const l=r.querySelector('.extra-lbl'),v=r.querySelector('.extra-val');
+      if(l&&v) lines.push('   • '+l.innerText+': '+v.innerText);
+    });
+    const tot=extraBox.querySelector('.extra-total');
+    if(tot) lines.push('   Разом: '+(tot.children[1]?tot.children[1].innerText:''));
+  }
+
+  lines.push('');
+  lines.push('━━━━━━━━━━━━━━━━━━━━');
+  lines.push('🏢 ТОВ «Експертна Думка» · Житомир');
+  lines.push('📞 +38 097 921 3772');
+  lines.push('✉️ zt.expert@gmail.com');
+  lines.push('⚠️ Орієнтовний розрахунок. Консультуйтесь з нотаріусом.');
+  return lines.join('\n');
+}
+
 function shareResult(){
   const base=getCurrentBase();
   if(!base){showToast('Спочатку введіть суму угоди');return}
-  const rb=document.getElementById('result-block');
-  const resultText=(rb.innerText||rb.textContent||'').replace(/\s+/g,' ').trim();
-  const date=new Date().toLocaleDateString('uk-UA');
-  const text=`📊 Розрахунок податків при продажу нерухомості\n🗓 ${date}\n\n${resultText}\n\n🏢 ТОВ «Експертна Думка» · Житомир\n⚠️ Орієнтовний розрахунок. Консультуйтесь з нотаріусом.`;
-
+  const text=buildShareText();
   if(navigator.share){
     navigator.share({title:'Розрахунок податків — Експертна Думка',text})
     .then(()=>showToast('✓ Надіслано!'))
