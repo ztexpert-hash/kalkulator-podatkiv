@@ -792,10 +792,9 @@ function calcSpadkuv(){
     </div>`}
     <div class="note"><strong>Важливо:</strong> ${noteText[spStep]}</div>
     <div class="extra-box" style="margin-top:8px">
-      <div class="extra-title">Додаткові витрати (орієнтовно)</div>
+      <div class="extra-title">Додаткові витрати (не податки)</div>
       <div class="extra-grid">
-        <div class="extra-item"><span class="extra-lbl">Плата за нотар. оформлення ~1%</span><span class="extra-val">${fmt(base*0.01)} грн</span></div>
-        <div class="extra-total"><span>Орієнтовно разом</span><span>${fmt(total+base*0.01)} грн</span></div>
+        <div class="extra-item"><span class="extra-lbl">📋 Плата за нотаріальне оформлення спадщини</span><span class="extra-val" style="color:var(--text-2);font-weight:400;font-size:11px">уточнюйте при оформленні</span></div>
       </div>
     </div>`;
   if(window._recalcRates)window._recalcRates();
@@ -882,11 +881,10 @@ function calcHouse(){
       <div class="tv">${fmt(totalTax)} грн</div>
     </div>
     <div class="extra-box">
-      <div class="extra-title">Додаткові витрати (не податки, орієнтовно)</div>
+      <div class="extra-title">Додаткові витрати (не податки)</div>
       <div class="extra-grid">
-        <div class="extra-item"><span class="extra-lbl">Плата за нотар. оформлення ~1% (по кожному договору)</span><span class="extra-val">${fmt(notarBase*0.01)} грн</span></div>
-        <div class="extra-item"><span class="extra-lbl">Внесок до ПФ 1% — тільки з будинку (покупець)</span><span class="extra-val">${fmt(pfBase*0.01)} грн</span></div>
-        <div class="extra-total"><span>Орієнтовно разом</span><span>${fmt(notarBase*0.01+pfBase*0.01)} грн</span></div>
+        <div class="extra-item"><span class="extra-lbl">📋 Плата за нотаріальне оформлення (по кожному договору)</span><span class="extra-val" style="color:var(--text-2);font-weight:400;font-size:11px">уточнюйте при оформленні</span></div>
+        <div class="extra-item"><span class="extra-lbl">📋 Внесок до ПФ — тільки з будинку (покупець)</span><span class="extra-val" style="color:var(--text-2);font-weight:400;font-size:11px">уточнюйте при оформленні</span></div>
       </div>
     </div>`;
   if(window._recalcRates)window._recalcRates();
