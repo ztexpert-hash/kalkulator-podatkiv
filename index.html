@@ -488,7 +488,7 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
 if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js')}
 
 // PAYWALL SYSTEM
-const FREE_LIMIT = 3;
+const FREE_LIMIT = 5;
 const MASTER_CODE = 'EXPERT_ADMIN'; // твій особистий — ніколи не змінюється
 
 // СПИСОК КОДІВ КЛІЄНТІВ — додавай/видаляй тут
@@ -539,9 +539,9 @@ function updateCounter(){
   const u=getUsage();
   const left=Math.max(0,FREE_LIMIT-u.count);
   if(left>0){
-    bar.innerHTML=`Безкоштовний доступ · залишилось розрахунків: <span>${left}</span> з ${FREE_LIMIT}`;
+    bar.innerHTML=`Безкоштовний доступ · залишилось безкоштовних розрахунків: <span>${left}</span> з ${FREE_LIMIT}`;
   } else {
-    bar.innerHTML='Безкоштовний ліміт вичерпано · <span>Оформіть підписку</span>';
+    bar.innerHTML='Безкоштовні розрахунки вичерпано · <span>Оформіть підписку</span>';
     bar.style.background='#A32D2D';
   }
 }
