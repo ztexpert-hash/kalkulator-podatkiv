@@ -247,6 +247,21 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
     </a>
   </div>
 
+  <!-- ВИБІР ВАЛЮТИ ВВЕДЕННЯ -->
+  <div class="card" id="currency-selector-card" style="padding:12px 14px">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#64748B">Валюта вводу:</span>
+      <div class="toggle-row" style="flex:1;min-width:200px">
+        <button class="tog on" id="cur-uah" onclick="setInputCurrency('UAH')">₴ Грн</button>
+        <button class="tog"    id="cur-usd" onclick="setInputCurrency('USD')">$ USD</button>
+        <button class="tog"    id="cur-eur" onclick="setInputCurrency('EUR')">€ EUR</button>
+      </div>
+    </div>
+    <div id="currency-conversion-info" style="font-size:11px;color:#94A3B8;margin-top:6px;display:none">
+      База оподаткування рахується в гривні за курсом НБУ на сьогодні
+    </div>
+  </div>
+
   <!-- КУРС НБУ -->
   <div class="rates-bar" id="rates-bar">
     <div class="rates-bar-content">
@@ -519,27 +534,31 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
       <div class="paywall-logo">ЕКСПЕРТНА ДУМКА</div>
       <div class="paywall-icon">🔒</div>
       <div class="paywall-title">Ви використали 5 безкоштовних розрахунків</div>
-      <div class="paywall-sub">Для необмеженого доступу до всіх функцій — оформіть річну підписку</div>
-      <div class="paywall-price">
-        <div class="pp-label">РІЧНА ПІДПИСКА</div>
-        <div class="pp-val">500 <span style="font-size:18px">₴</span></div>
-        <div class="pp-period">/ рік · менше 42 ₴ на місяць</div>
+      <div class="paywall-sub">Для необмеженого доступу — оформіть річну підписку</div>
+      <div style="background:linear-gradient(135deg,#1B2B5E 0%,#243470 100%);border-radius:14px;padding:14px;margin-bottom:12px;border:2px solid #D4A017;text-align:center">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.05em;color:#F0C040;margin-bottom:4px">🇺🇦 АКЦІЯ · ДО 30 ЛИПНЯ</div>
+        <div style="font-size:32px;font-weight:800;color:#F0C040;margin-bottom:2px">250 <span style="font-size:18px">₴</span></div>
+        <div style="font-size:12px;color:#A0B4E8">/ рік · усі кошти на <strong style="color:#fff">Сили оборони України</strong></div>
+        <div style="font-size:11px;color:#A0B4E8;margin-top:4px">Звичайна ціна — 500 ₴</div>
       </div>
       <div class="paywall-features">
         <div class="paywall-feat"><div class="pf-dot">✓</div>Квартира, будинок, ділянка, спадкування</div>
         <div class="paywall-feat"><div class="pf-dot">✓</div>Збереження PDF та поділитись результатом</div>
-        <div class="paywall-feat"><div class="pf-dot">✓</div>Таблиця всіх ставок оподаткування</div>
+        <div class="paywall-feat"><div class="pf-dot">✓</div>Курс НБУ та розрахунок у валютах</div>
         <div class="paywall-feat"><div class="pf-dot">✓</div>Необмежена кількість розрахунків</div>
         <div class="paywall-feat"><div class="pf-dot">✓</div>Оновлення при зміні законодавства</div>
       </div>
-      <button class="paywall-btn" onclick="requestAccess()">Отримати доступ →</button>
+      <a href="https://send.monobank.ua/jar/9KnaSnmkdK" target="_blank" rel="noopener" class="paywall-btn" style="display:block;text-align:center;text-decoration:none;margin-bottom:8px;background:#16A34A;color:#fff">
+        💚 Оплатити через банку Monobank →
+      </a>
+      <button class="paywall-btn" onclick="requestAccess()" style="background:#D4A017">Я вже маю код →</button>
       <div id="code-input-wrap" style="margin-bottom:12px;display:none">
         <input type="text" id="access-code-input" placeholder="Введіть код доступу" style="width:100%;padding:12px;border-radius:10px;border:1.5px solid #E2E8F0;font-size:15px;text-align:center;font-family:inherit;margin-bottom:8px;outline:none">
         <button class="paywall-btn" onclick="submitCode()" style="margin-bottom:0">Підтвердити →</button>
         <div id="code-error" style="font-size:12px;color:#B91C1C;margin-top:6px;display:none">Невірний код. Зверніться: +38 097 921 3772</div>
       </div>
       <div class="paywall-contact">
-        Зв'яжіться для оплати:<br>
+        Після оплати надішліть квитанцію — отримаєте код:<br>
         <a href="tel:+380979213772">+38 097 921 3772</a> ·
         <a href="mailto:zt.expert@gmail.com">zt.expert@gmail.com</a>
       </div>
@@ -632,19 +651,36 @@ function incrementCalc(){
   // Рахуємо тільки коли є реальний результат (сума > 0)
   const base=getCurrentBase();
   if(!base || base===0) return;
-  const u=getUsage();
-  u.count++;
-  saveUsage(u);
-  updateCounter();
-  // Відправляємо подію в Google Analytics
-  if(typeof gtag!=='undefined'){
-    gtag('event','calculation',{
-      'event_category':'Калькулятор',
-      'event_label': propType||'zhytlova',
-      'value': Math.round(base)
-    });
-  }
-  if(u.count>=FREE_LIMIT) showPaywall();
+  
+  // Скасовуємо попередній таймер
+  if(window._calcDebounce) clearTimeout(window._calcDebounce);
+  
+  // Лічимо лише через 2 секунди після останньої зміни
+  // Це дає клієнту час ввести повну суму
+  window._calcDebounce = setTimeout(()=>{
+    if(isUnlocked()) return;
+    const currentBase=getCurrentBase();
+    if(!currentBase || currentBase===0) return;
+    
+    // Не рахуємо двічі ту саму суму
+    const lastBase=window._lastCountedBase||0;
+    if(currentBase===lastBase) return;
+    window._lastCountedBase=currentBase;
+    
+    const u=getUsage();
+    u.count++;
+    saveUsage(u);
+    updateCounter();
+    // Відправляємо подію в Google Analytics
+    if(typeof gtag!=='undefined'){
+      gtag('event','calculation',{
+        'event_category':'Калькулятор',
+        'event_label': propType||'zhytlova',
+        'value': Math.round(currentBase)
+      });
+    }
+    if(u.count>=FREE_LIMIT) showPaywall();
+  }, 2000);
 }
 
 function updateCounter(){
@@ -848,6 +884,46 @@ function displayRates(usd, eur, date){
   document.getElementById('rate-usd').textContent=usd+' ₴';
   document.getElementById('rate-eur').textContent=eur+' ₴';
   document.getElementById('rate-date').textContent='станом на '+date;
+  // Зберігаємо для конвертації
+  window._currentRates={usd:parseFloat(usd), eur:parseFloat(eur)};
+}
+
+// ВАЛЮТА ВВЕДЕННЯ
+let inputCurrency='UAH';
+
+function setInputCurrency(cur){
+  inputCurrency=cur;
+  ['UAH','USD','EUR'].forEach(c=>{
+    const id=c==='UAH'?'cur-uah':c==='USD'?'cur-usd':'cur-eur';
+    document.getElementById(id).className='tog'+(c===cur?' on':'');
+  });
+  const info=document.getElementById('currency-conversion-info');
+  info.style.display=cur==='UAH'?'none':'block';
+  // Оновлюємо плейсхолдери і лейбли
+  const symbol=cur==='UAH'?'грн':cur==='USD'?'USD':'EUR';
+  document.querySelectorAll('label').forEach(l=>{
+    const txt=l.textContent;
+    if(txt.includes('Договірна ціна')) l.textContent='Договірна ціна, '+symbol;
+    if(txt.includes('Оціночна')) l.textContent='Оціночна вартість, '+symbol;
+    if(txt.includes('будинку, грн')||txt.includes('будинку, USD')||txt.includes('будинку, EUR')) l.textContent='Вартість будинку, '+symbol;
+    if(txt.includes('ділянки, грн')||txt.includes('ділянки, USD')||txt.includes('ділянки, EUR')) l.textContent='Вартість ділянки, '+symbol;
+  });
+  // Перераховуємо
+  calc();
+}
+
+function convertToUAH(amount){
+  if(inputCurrency==='UAH') return amount;
+  if(!window._currentRates) return amount;
+  const rate=inputCurrency==='USD'?window._currentRates.usd:window._currentRates.eur;
+  return amount * rate;
+}
+
+function convertFromUAH(uahAmount, targetCur){
+  if(!targetCur || targetCur==='UAH') return uahAmount;
+  if(!window._currentRates) return uahAmount;
+  const rate=targetCur==='USD'?window._currentRates.usd:window._currentRates.eur;
+  return uahAmount / rate;
 }
 
 function checkForUpdate(){
@@ -955,6 +1031,20 @@ document.getElementById('land-eval').addEventListener('input',function(){landEva
 document.getElementById('land-price').addEventListener('input',function(){if(!this.value)landEvalManual=false});
 
 function fmt(n){return Math.round(n).toLocaleString('uk-UA')}
+
+// Формат з дублюванням у валюту вводу
+function fmtDual(uahAmount, inline=false){
+  const uahStr=fmt(uahAmount)+' грн';
+  if(inputCurrency==='UAH'||!window._currentRates) return uahStr;
+  const cur=inputCurrency;
+  const symbol=cur==='USD'?'$':'€';
+  const converted=convertFromUAH(uahAmount, cur);
+  const curStr=symbol+fmt(converted);
+  if(inline){
+    return `${uahStr} <span style="color:#94A3B8;font-size:11px;font-weight:400">(${curStr})</span>`;
+  }
+  return `${uahStr}<div style="font-size:11px;color:#94A3B8;font-weight:400;margin-top:2px">≈ ${curStr}</div>`;
+}
 function getRatesFor(y,sale){
   if(y==='inherited'&&sale===1)return{pdfo:0,vz:0};
   if(sale>=3)return{pdfo:18,vz:5};
@@ -969,7 +1059,7 @@ function getRates(){
 function getBase(){
   const p=parseFloat(document.getElementById('price').value)||0;
   const e=parseFloat(document.getElementById('eval_val').value)||0;
-  return Math.max(p,e);
+  return convertToUAH(Math.max(p,e));
 }
 
 function calc(){
@@ -981,7 +1071,7 @@ function calc(){
   if(pdfo===0&&vz===0){
     rb.innerHTML=`<div class="zero-box">Пільга — 0% ПДФО та 0% військового збору</div>
       <div class="result-grid">
-        <div class="rcard"><div class="rl">База оподаткування</div><div class="rv">${fmt(base)} грн</div></div>
+        <div class="rcard"><div class="rl">База оподаткування</div><div class="rv">${fmtDual(base)}</div></div>
         <div class="rcard"><div class="rl">Податки разом</div><div class="rv" style="color:#16A34A">0 грн</div></div>
       </div>
       <div class="extra-box">
@@ -995,13 +1085,13 @@ function calc(){
   } else {
     rb.innerHTML=`<div class="section-label">Результат розрахунку</div>
       <div class="result-grid">
-        <div class="rcard"><div class="rl">База оподаткування</div><div class="rv">${fmt(base)} грн</div></div>
+        <div class="rcard"><div class="rl">База оподаткування</div><div class="rv">${fmtDual(base)}</div></div>
         <div class="rcard"><div class="rl">ПДФО ${pdfo}%</div><div class="rv">${fmt(pdfoAmt)} грн</div></div>
         <div class="rcard"><div class="rl">Військ. збір ${vz}%</div><div class="rv">${fmt(vzAmt)} грн</div></div>
       </div>
       <div class="total-box">
         <div><div class="tl">Податки разом</div><div class="tc">${pdfo+vz}% від бази</div></div>
-        <div class="tv">${fmt(total)} грн</div>
+        <div class="tv">${fmtDual(total, true)}</div>
       </div>
       <div class="extra-box">
         <div class="extra-title">Додаткові витрати (не податки)</div>
@@ -1091,7 +1181,7 @@ function calcSpadkuv(){
   rb.innerHTML=`
     <div class="section-label">📜 Спадкування · ${stepLabels[spStep]}</div>
     <div class="result-grid">
-      <div class="rcard"><div class="rl">База оподаткування</div><div class="rv">${fmt(base)} грн</div></div>
+      <div class="rcard"><div class="rl">База оподаткування</div><div class="rv">${fmtDual(base)}</div></div>
       <div class="rcard"><div class="rl">ПДФО ${pdfo}% + ВЗ ${vz}%</div>
         <div class="rv" style="color:${isZero?'#16A34A':'#1B2B5E'}">${isZero?'0 грн':fmt(total)+' грн'}</div></div>
     </div>
@@ -1102,7 +1192,7 @@ function calcSpadkuv(){
     </div>
     <div class="total-box" style="margin-top:8px">
       <div><div class="tl">Податок разом</div><div class="tc">${pdfo+vz}% від бази</div></div>
-      <div class="tv">${fmt(total)} грн</div>
+      <div class="tv">${fmtDual(total, true)}</div>
     </div>`}
     <div class="note"><strong>Важливо:</strong> ${noteText[spStep]}</div>
     <div class="extra-box" style="margin-top:8px">
@@ -1117,13 +1207,13 @@ function calcSpadkuv(){
 
 function calcHouse(){
   // ОБ'ЄКТ 1: будинок + ділянка під ним = один об'єкт
-  const hBase=Math.max(parseFloat(document.getElementById('house-price').value)||0,parseFloat(document.getElementById('house-eval').value)||0);
-  const lBase=Math.max(parseFloat(document.getElementById('land-price').value)||0,parseFloat(document.getElementById('land-eval').value)||0);
+  const hBase=convertToUAH(Math.max(parseFloat(document.getElementById('house-price').value)||0,parseFloat(document.getElementById('house-eval').value)||0));
+  const lBase=convertToUAH(Math.max(parseFloat(document.getElementById('land-price').value)||0,parseFloat(document.getElementById('land-eval').value)||0));
   const obj1Base=hBase+lBase; // сума = база 1-го об'єкта
   // ОБ'ЄКТ 2: ОСГ (якщо є)
-  const oBase=osgEnabled?Math.max(parseFloat(document.getElementById('osg-price').value)||0,parseFloat(document.getElementById('osg-eval').value)||0):0;
+  const oBase=osgEnabled?convertToUAH(Math.max(parseFloat(document.getElementById('osg-price').value)||0,parseFloat(document.getElementById('osg-eval').value)||0)):0;
   // ОБ'ЄКТ 3: Ділянка під забудову (якщо є)
-  const zBase=zabudEnabled?Math.max(parseFloat(document.getElementById('zabud-price').value)||0,parseFloat(document.getElementById('zabud-eval').value)||0):0;
+  const zBase=zabudEnabled?convertToUAH(Math.max(parseFloat(document.getElementById('zabud-price').value)||0,parseFloat(document.getElementById('zabud-eval').value)||0)):0;
 
   const rb=document.getElementById('result-block');
   if(!obj1Base&&!oBase&&!zBase){rb.innerHTML='<div class="hint" style="text-align:center;padding:1rem;color:#94A3B8">Введіть вартість будинку та/або ділянок</div>';return}
@@ -1183,7 +1273,7 @@ function calcHouse(){
     return`<div class="obj-block">
       <div class="obj-title">${obj.lbl} <span class="sale-badge" style="${saleStyle}">${saleLabel}</span></div>
       <div class="result-grid">
-        <div class="rcard"><div class="rl">База оподаткування</div><div class="rv">${fmt(obj.base)} грн</div>${baseDetail}</div>
+        <div class="rcard"><div class="rl">База оподаткування</div><div class="rv">${fmtDual(obj.base)}</div>${baseDetail}</div>
         <div class="rcard"><div class="rl">ПДФО ${obj.r.pdfo}% + ВЗ ${obj.r.vz}%</div>
           <div class="rv" style="color:${isZero?'#16A34A':'#1B2B5E'}">${isZero?'0 грн':fmt(obj.tax)+' грн'}</div></div>
       </div>
@@ -1200,7 +1290,7 @@ function calcHouse(){
     ${objects.map(o=>objBlock(o)).join('')}
     <div class="total-box" style="margin-top:10px">
       <div><div class="tl">Податки разом (всі об'єкти)</div></div>
-      <div class="tv">${fmt(totalTax)} грн</div>
+      <div class="tv">${fmtDual(totalTax, true)}</div>
     </div>
     <div class="extra-box">
       <div class="extra-title">Додаткові витрати (не податки)</div>
@@ -1615,13 +1705,15 @@ function showToast(msg){
 }
 
 function getCurrentBase(){
+  let rawBase;
   if(propType==='budynok'){
-    return Math.max(parseFloat(document.getElementById('house-price').value)||0,parseFloat(document.getElementById('house-eval').value)||0);
+    rawBase=Math.max(parseFloat(document.getElementById('house-price').value)||0,parseFloat(document.getElementById('house-eval').value)||0);
+  } else if(propType==='spadkuv'){
+    rawBase=Math.max(parseFloat(document.getElementById('sp-price').value)||0,parseFloat(document.getElementById('sp-eval').value)||0);
+  } else {
+    rawBase=Math.max(parseFloat(document.getElementById('price').value)||0,parseFloat(document.getElementById('eval_val').value)||0);
   }
-  if(propType==='spadkuv'){
-    return Math.max(parseFloat(document.getElementById('sp-price').value)||0,parseFloat(document.getElementById('sp-eval').value)||0);
-  }
-  return Math.max(parseFloat(document.getElementById('price').value)||0,parseFloat(document.getElementById('eval_val').value)||0);
+  return convertToUAH(rawBase);
 }
 
 function saveScreenshot(){
