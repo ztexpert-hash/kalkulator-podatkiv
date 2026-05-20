@@ -98,6 +98,23 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
 .sc-row.active .sp{color:#378ADD}
 .rates-btn{width:100%;display:flex;align-items:center;gap:10px;background:var(--navy);color:#fff;border:none;border-radius:14px;padding:13px 16px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:0;text-align:left;transition:background .15s}
 .rates-bar{background:#fff;border:1px solid var(--border);border-radius:12px;padding:10px 14px;margin-bottom:10px}
+.charity-banner{background:linear-gradient(135deg,#1B2B5E 0%,#243470 100%);border-radius:14px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px;position:relative;overflow:hidden;border:2px solid #D4A017}
+.charity-banner::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,#0057B7 50%,#FFD500 50%)}
+.cb-flag{font-size:32px;flex-shrink:0;padding-left:6px}
+.cb-content{flex:1;min-width:0;color:#fff}
+.cb-title{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#F0C040;margin-bottom:3px}
+.cb-text{font-size:12px;line-height:1.4;margin-bottom:6px;color:#E8ECF5}
+.cb-text strong{color:#fff;font-weight:700}
+.cb-stats{font-size:11px;color:#A0B4E8;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.cb-stats strong{color:#F0C040;font-weight:700}
+.cb-divider{opacity:.5}
+.cb-btn{background:#D4A017;color:#1B2B5E;border:none;border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0;cursor:pointer;font-family:inherit;touch-action:manipulation;transition:background .15s;text-align:center}
+.cb-btn:active{background:#B8910F}
+@media(max-width:480px){
+  .charity-banner{flex-direction:column;align-items:stretch;text-align:left;gap:10px}
+  .cb-flag{align-self:flex-start;font-size:28px;padding-left:0}
+  .cb-btn{width:100%;padding:10px}
+}
 .rates-bar-content{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .rates-bar-item{display:flex;align-items:center;gap:6px;flex:1;min-width:0}
 .rates-bar-divider{width:1px;height:20px;background:var(--border);flex-shrink:0}
@@ -211,6 +228,23 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
   <div id="install-banner" class="install-banner" style="display:none" onclick="installApp()">
     <div class="ib-text"><div class="ib-title">Встановити як додаток</div><div class="ib-sub">Працює без інтернету</div></div>
     <div class="ib-btn">Встановити</div>
+  </div>
+
+  <!-- БЛАГОДІЙНИЙ БАНЕР -->
+  <div class="charity-banner" id="charity-banner">
+    <div class="cb-flag">🇺🇦</div>
+    <div class="cb-content">
+      <div class="cb-title">Акційний запуск · до 30 липня</div>
+      <div class="cb-text">Усі кошти від підписок (250 ₴) — <strong>Силам оборони України</strong></div>
+      <div class="cb-stats">
+        <span class="cb-collected">Зібрано: <strong id="charity-amount">0 ₴</strong></span>
+        <span class="cb-divider">·</span>
+        <span class="cb-supporters"><strong id="charity-count">0</strong> підтримали</span>
+      </div>
+    </div>
+    <a href="#" id="charity-btn" class="cb-btn" target="_blank" rel="noopener">
+      Підтримати ЗСУ →
+    </a>
   </div>
 
   <!-- КУРС НБУ -->
@@ -720,7 +754,45 @@ window.addEventListener('load',()=>{
 
   // Завантаження курсу НБУ
   loadNBURates();
+
+  // Благодійний банер — налаштування
+  initCharityBanner();
 });
+
+// БЛАГОДІЙНИЙ БАНЕР — ти оновлюєш ці значення вручну
+const CHARITY_CONFIG = {
+  // Посилання на банку
+  bankUrl: 'https://send.monobank.ua/jar/9KnaSnmkdK',
+  // Сума зібраних коштів (оновлюй вручну в коді)
+  collected: 0,
+  // Кількість клієнтів які підтримали (оновлюй вручну)
+  supporters: 0,
+  // Активний період акції (формат YYYY-MM-DD)
+  endDate: '2026-07-30'
+};
+
+function initCharityBanner(){
+  // Перевіряємо чи акція ще активна
+  const now=new Date();
+  const end=new Date(CHARITY_CONFIG.endDate);
+  if(now > end){
+    // Акція завершена — приховуємо банер
+    const banner=document.getElementById('charity-banner');
+    if(banner) banner.style.display='none';
+    return;
+  }
+  // Встановлюємо посилання на банку
+  document.getElementById('charity-btn').href=CHARITY_CONFIG.bankUrl;
+  // Показуємо лічильники
+  document.getElementById('charity-amount').textContent=CHARITY_CONFIG.collected.toLocaleString('uk-UA')+' ₴';
+  document.getElementById('charity-count').textContent=CHARITY_CONFIG.supporters;
+  // Трекаємо клік
+  document.getElementById('charity-btn').addEventListener('click',()=>{
+    if(typeof gtag!=='undefined'){
+      gtag('event','charity_click',{'event_category':'Благодійність'});
+    }
+  });
+}
 
 function loadNBURates(){
   const today=new Date();
