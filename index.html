@@ -634,8 +634,7 @@ const CLIENT_CODES = {
   'ED-PSC-2026-SGJD':  'Пащенко Наталія, 0672485209, Кєнт, опл. 13.05.2026',
   'ED-NCH-2026-U77R':  'Янчук Максим, 0677724447, Кєнт, опл. 14.05.2026',
   'ED-LKM-2026-BB49':  'Лукомська Наталія, 0984760658, Ріелтор, опл. 18.05.2026',
-  'ED-STR-2026-DP4K':  'Стражник Ксенія, +436787901741, BOSS, опл. 18.05.2026',  
-  'ED-SMN-2026-7ZJ4':  'Семенюк Вікторія, 0679091612, Нотаріус, опл. 22.05.2026',
+  'ED-STR-2026-DP4K':  'Стражник Ксенія, +436787901741, BOSS, опл. 18.05.2026',
 };
 
 function getDeviceId(){
@@ -1186,11 +1185,24 @@ document.getElementById('land-price').addEventListener('input',function(){if(!th
 
 function fmt(n){return Math.round(n).toLocaleString('uk-UA')}
 
+// Визначає активну валюту "виводу" — беремо валюту першого ненульового поля
+function getDisplayCurrency(){
+  const candidates=['price','house-price','land-price','osg-price','zabud-price','sp-price'];
+  for(const id of candidates){
+    const el=document.getElementById(id);
+    if(el && el.value && parseFloat(el.value)>0){
+      const cur=getFieldCurrency(id);
+      if(cur!=='UAH') return cur;
+    }
+  }
+  return 'UAH';
+}
+
 // Формат з дублюванням у валюту вводу
 function fmtDual(uahAmount, inline=false){
   const uahStr=fmt(uahAmount)+' грн';
-  if(inputCurrency==='UAH'||!window._currentRates) return uahStr;
-  const cur=inputCurrency;
+  const cur=(typeof getDisplayCurrency==='function')?getDisplayCurrency():inputCurrency;
+  if(cur==='UAH'||!window._currentRates) return uahStr;
   const symbol=cur==='USD'?'$':'€';
   const converted=convertFromUAH(uahAmount, cur);
   const curStr=symbol+fmt(converted);
@@ -1699,8 +1711,12 @@ function savePDF(){
     .etot{font-weight:700;color:#1B2B5E;padding-top:8px}
     .etot .ev{color:#D4A017;font-size:14px}
     .note{font-size:10px;color:#94A3B8;border-top:1px solid #E2E8F0;padding-top:10px;margin-top:4px;line-height:1.7}
-    @media print{.print-btn{display:none}}
+    .print-btn{position:fixed;bottom:20px;right:20px;background:#16A34A;color:#fff;border:none;border-radius:50px;padding:14px 22px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.2);z-index:1000;font-family:inherit;touch-action:manipulation}
+    .back-btn{position:fixed;top:20px;left:20px;background:#1B2B5E;color:#fff;border:none;border-radius:50px;padding:12px 20px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.2);z-index:1000;font-family:inherit;touch-action:manipulation;text-decoration:none;display:inline-block}
+    .back-btn:active{transform:scale(.95)}
+    @media print{.print-btn,.back-btn{display:none}}
   </style></head><body>
+  <a href="https://ztexpert-hash.github.io/kalkulator-podatkiv" class="back-btn">← Назад до калькулятора</a>
   <button class="print-btn" onclick="window.print()">🖨️ Роздрукувати / Зберегти як PDF</button>
   <div class="hdr">
     <div><div class="cn">ТОВ «ЕКСПЕРТНА ДУМКА»</div><div class="cs">Оцінка нерухомості · Житомир</div></div>
