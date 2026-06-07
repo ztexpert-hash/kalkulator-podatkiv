@@ -118,6 +118,17 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
 .comm-note{background:var(--amber-l);border-left:3px solid var(--amber);border-radius:0 8px 8px 0;padding:10px 14px;font-size:12px;color:#92400E;line-height:1.65;margin-top:10px;display:none}
 .obj-block{background:#F8FAFC;border-radius:10px;padding:12px;margin-bottom:8px;border:.5px solid var(--border)}
 .obj-block:last-child{margin-bottom:0}
+
+.breakdown-box{background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:12px 14px;margin-top:10px}
+.bd-title{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#92400E;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #FDE68A}
+.bd-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:13px;gap:8px;flex-wrap:wrap}
+.bd-row+.bd-row{border-top:1px dashed #FDE68A}
+.bd-name{color:#1B2B5E;flex:1;min-width:0;line-height:1.4}
+.bd-rate{font-size:10px;color:#92400E;font-weight:600;background:#FEF3C7;padding:1px 6px;border-radius:4px;margin-left:4px;white-space:nowrap}
+.bd-val{color:#1B2B5E;font-weight:700;font-size:14px;white-space:nowrap}
+.bd-zero .bd-name{color:#15803D}
+.bd-total{padding-top:8px;margin-top:4px;border-top:2px solid #D4A017 !important;font-size:15px}
+.bd-total .bd-val{color:#D4A017;font-size:16px}
 .obj-title{font-size:12px;font-weight:600;color:var(--text-2);margin-bottom:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .sale-badge{font-size:11px;background:#E0E7FF;color:#3730A3;padding:2px 7px;border-radius:4px;font-weight:600}
 .sc-row{display:flex;align-items:center;gap:8px;font-size:12px;padding:9px 0;border-bottom:.5px solid #F1F5F9}
@@ -634,8 +645,7 @@ const CLIENT_CODES = {
   'ED-PSC-2026-SGJD':  'Пащенко Наталія, 0672485209, Кєнт, опл. 13.05.2026',
   'ED-NCH-2026-U77R':  'Янчук Максим, 0677724447, Кєнт, опл. 14.05.2026',
   'ED-LKM-2026-BB49':  'Лукомська Наталія, 0984760658, Ріелтор, опл. 18.05.2026',
-  'ED-STR-2026-DP4K':  'Стражник Ксенія, +436787901741, BOSS, опл. 18.05.2026',  
-  'ED-NDK-2026-H3LX': 'Яндюк Микола, Ріелтор, опл. 07.06.2026',
+  'ED-STR-2026-DP4K':  'Стражник Ксенія, +436787901741, BOSS, опл. 18.05.2026',
 };
 
 function getDeviceId(){
@@ -1449,10 +1459,39 @@ function calcHouse(){
   const ruleBanner=`<div style="background:#EBF4FF;border-left:3px solid #378ADD;border-radius:0 8px 8px 0;padding:8px 12px;font-size:12px;color:#185FA5;font-weight:500;margin-bottom:10px">
     📜 Згідно ст. 172 ПКУ: будинок + ділянка під ним = 1 об'єкт. Кожна додаткова ділянка — окремий продаж.
   </div>`;
+  
+  // Деталізація суми податків по об'єктах
+  const breakdownRows=objects.filter(o=>!o.exempted&&o.tax>0).map(o=>{
+    const icon=o.lbl.match(/^[^\s]+/)?.[0]||'';
+    const name=o.lbl.replace(/^[^\s]+\s/,'');
+    return `<div class="bd-row">
+      <div class="bd-name">${icon} ${name} <span class="bd-rate">${o.r.pdfo}%+${o.r.vz}%</span></div>
+      <div class="bd-val">${fmt(o.tax)} грн</div>
+    </div>`;
+  }).join('');
+  
+  const exemptedRows=objects.filter(o=>o.exempted||o.tax===0).map(o=>{
+    const icon=o.lbl.match(/^[^\s]+/)?.[0]||'';
+    const name=o.lbl.replace(/^[^\s]+\s/,'');
+    return `<div class="bd-row bd-zero">
+      <div class="bd-name">${icon} ${name}</div>
+      <div class="bd-val" style="color:#16A34A">0 грн</div>
+    </div>`;
+  }).join('');
+  
+  const breakdownBlock=(breakdownRows||exemptedRows)?`
+    <div class="breakdown-box">
+      <div class="bd-title">Деталізація податків по об'єктах</div>
+      ${exemptedRows}
+      ${breakdownRows}
+      ${breakdownRows?`<div class="bd-row bd-total"><div class="bd-name"><strong>Разом до сплати</strong></div><div class="bd-val"><strong>${fmt(totalTax)} грн</strong></div></div>`:''}
+    </div>`:'';
+  
   rb.innerHTML=`
     ${ruleBanner}
     <div class="section-label">${objects.length} об'єкт(и) оподаткування</div>
     ${objects.map(o=>objBlock(o)).join('')}
+    ${breakdownBlock}
     <div class="total-box" style="margin-top:10px">
       <div><div class="tl">Податки разом (всі об'єкти)</div></div>
       <div class="tv">${fmtDual(totalTax, true)}</div>
