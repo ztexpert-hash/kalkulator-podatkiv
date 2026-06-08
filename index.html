@@ -236,6 +236,9 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
 .paywall-contact a{color:#1B2B5E;font-weight:600;text-decoration:none}
 .counter-bar{background:#1B2B5E;color:#A0B4E8;font-size:11px;text-align:center;padding:6px;letter-spacing:.03em}
 .counter-bar span{color:#F0C040;font-weight:700}
+.counter-bar.gift{font-size:14px;font-weight:600;color:#fff;padding:13px 14px;line-height:1.45}
+.counter-bar.gift span{color:#FFD500;font-weight:800}
+@media(max-width:480px){.counter-bar.gift{font-size:13px;padding:12px 12px}}
 </style>
 </head>
 <body>
@@ -286,8 +289,7 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
   <div class="charity-banner" id="charity-banner">
     <div class="cb-flag">🇺🇦</div>
     <div class="cb-content">
-      <div class="cb-title">Безкоштовний доступ · до 31 серпня</div>
-      <div class="cb-text">Підтримуйте <strong>Сили оборони України</strong> — калькулятор у подарунок</div>
+      <div class="cb-text">Усі зібрані кошти спрямовуються на підтримку <strong>Сил оборони України</strong></div>
       <div class="cb-stats">
         <span class="cb-collected">Зібрано: <strong id="charity-amount">0 ₴</strong></span>
         <span class="cb-divider">·</span>
@@ -741,13 +743,15 @@ function updateCounter(){
   const bar=document.getElementById('counter-bar');
   if(!bar) return;
   if(isFreePeriod()){
-    bar.innerHTML='🇺🇦 Підтримуйте Сили оборони — «Калькулятор податків» у подарунок від нас · <span>безкоштовний доступ</span>';
+    bar.innerHTML='🇺🇦 Донат від вас — <span>Калькулятор у подарунок від нас</span>';
+    bar.className='counter-bar gift';
     bar.style.background='#0F6E56';
     return;
   }
   if(isUnlocked()){
     const u=getUsage();
     const name=u.clientName?(' · '+u.clientName):'';
+    bar.className='counter-bar';
     bar.innerHTML='✓ Повний доступ активовано'+name+' · ТОВ «Експертна Думка»';
     bar.style.background='#0F6E56';
     return;
