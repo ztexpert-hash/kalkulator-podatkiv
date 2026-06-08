@@ -1278,15 +1278,24 @@ function calc(){
       </div>`;
   }
   const scenarios=[
-    {name:'1-й продаж, > 3 роки',pdfo:0,vz:0},
-    {name:'1-й продаж, < 3 роки / спадщина',pdfo:5,vz:5},
-    {name:'2-й продаж за рік',pdfo:5,vz:5},
-    {name:'3-й і більше за рік',pdfo:18,vz:5},
-    {name:'Комерційна нерухомість',pdfo:5,vz:5},
+    {name:'1-й продаж, > 3 роки',pdfo:0,vz:0,key:'more1'},
+    {name:'1-й продаж спадщини',pdfo:0,vz:0,key:'inh1'},
+    {name:'1-й продаж, < 3 роки',pdfo:5,vz:5,key:'less1'},
+    {name:'2-й продаж за рік',pdfo:5,vz:5,key:'sale2'},
+    {name:'3-й і більше за рік',pdfo:18,vz:5,key:'sale3'},
+    {name:'Комерційна нерухомість',pdfo:5,vz:5,key:'comm'},
   ];
+  // визначаємо, який саме сценарій активний за поточним вибором
+  let activeKey;
+  if(propType==='komertsiina') activeKey='comm';
+  else if(saleNum>=3) activeKey='sale3';
+  else if(saleNum===2) activeKey='sale2';
+  else if(years==='inherited') activeKey='inh1';
+  else if(years==='more') activeKey='more1';
+  else activeKey='less1';
   document.getElementById('all-scenarios').innerHTML=scenarios.map(sc=>{
     const amt=base*(sc.pdfo+sc.vz)/100, pct=sc.pdfo+sc.vz;
-    const isActive=sc.pdfo===pdfo&&sc.vz===vz;
+    const isActive=sc.key===activeKey;
     return`<div class="sc-row${isActive?' active':''}">
       <span class="sn">${isActive?'▸ ':''}${sc.name}</span>
       <span class="sv">${amt===0?'0 грн':fmt(amt)+' грн'}</span>
