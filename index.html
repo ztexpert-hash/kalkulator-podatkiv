@@ -271,7 +271,6 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
   <div class="chips" style="justify-content:center">
     <span class="chip">ПДФО</span>
     <span class="chip">Військ. збір</span>
-    <span class="chip">Нотар. оформлення</span>
   </div>
 </div>
 <div class="counter-bar" id="counter-bar"></div>
@@ -287,12 +286,14 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
   <div class="charity-banner" id="charity-banner">
     <div class="cb-flag">🇺🇦</div>
     <div class="cb-content">
-      <div class="cb-title">Акційний запуск · до 30 липня</div>
-      <div class="cb-text">Усі кошти від підписок (250 ₴) — <strong>Силам оборони України</strong></div>
+      <div class="cb-title">Безкоштовний доступ · до 31 серпня</div>
+      <div class="cb-text">Підтримуйте <strong>Сили оборони України</strong> — калькулятор у подарунок</div>
       <div class="cb-stats">
         <span class="cb-collected">Зібрано: <strong id="charity-amount">0 ₴</strong></span>
         <span class="cb-divider">·</span>
         <span class="cb-supporters"><strong id="charity-count">0</strong> підтримали</span>
+        <span class="cb-divider">·</span>
+        <span class="cb-updated" style="opacity:.7">станом на <span id="charity-updated">—</span></span>
       </div>
     </div>
     <a href="#" id="charity-btn" class="cb-btn" target="_blank" rel="noopener">
@@ -339,7 +340,7 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
     <div class="card" style="margin-bottom:0;border-radius:0 0 14px 14px;border-top:none">
       <table class="rt"><thead><tr><th>Ситуація</th><th>ПДФО</th><th>Військ. збір</th><th>Разом</th></tr></thead>
       <tbody id="rates-tbody"></tbody></table>
-      <div class="rt-note">Окремо від податків: плата за нотаріальне оформлення та внесок до Пенсійного фонду — уточнюйте при оформленні</div>
+      <div class="rt-note">Окремо від податків: внесок до Пенсійного фонду — уточнюйте при оформленні</div>
     </div>
   </div>
 
@@ -618,7 +619,7 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
     <button id="update-btn" type="button" style="margin-top:10px;padding:8px 16px;border-radius:8px;border:1px solid #D4A017;background:#FFF8E7;color:#92400E;font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;touch-action:manipulation">
       🔄 Перевірити оновлення
     </button>
-    <div style="font-size:9px;color:#94A3B8;margin-top:6px">Версія 2026.05.1</div>
+    <div style="font-size:11px;color:#64748B;margin-top:8px;font-weight:600">Версія 2026.06.1 · оновлено 08.06.2026</div>
   </div>
 
 </div>
@@ -629,6 +630,13 @@ if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js')}
 // PAYWALL SYSTEM
 const FREE_LIMIT = 5;
 const MASTER_CODE = 'EXPERT_ADMIN'; // твій особистий — ніколи не змінюється
+
+// БЕЗКОШТОВНИЙ ПЕРІОД — до цієї дати paywall повністю вимкнений,
+// усі розрахунки безкоштовні й необмежені. Після дати — повертається підписка.
+const FREE_PERIOD_END = '2026-08-31'; // формат YYYY-MM-DD
+function isFreePeriod(){
+  return new Date() <= new Date(FREE_PERIOD_END + 'T23:59:59');
+}
 
 // СПИСОК КОДІВ КЛІЄНТІВ — додавай/видаляй тут
 // Формат: 'КОД': 'Ім'я клієнта'
@@ -667,7 +675,7 @@ function getUsage(){
 function saveUsage(data){
   try{localStorage.setItem('ed_usage',JSON.stringify(data))}catch(e){}
 }
-function isUnlocked(){return getUsage().unlocked}
+function isUnlocked(){return isFreePeriod() || getUsage().unlocked}
 
 // Перевірка чи код вже використаний на іншому пристрої
 // Зберігаємо прив'язку: код → deviceId в окремому ключі
@@ -732,6 +740,11 @@ function incrementCalc(){
 function updateCounter(){
   const bar=document.getElementById('counter-bar');
   if(!bar) return;
+  if(isFreePeriod()){
+    bar.innerHTML='🇺🇦 Підтримуйте Сили оборони — «Калькулятор податків» у подарунок від нас · <span>безкоштовний доступ</span>';
+    bar.style.background='#0F6E56';
+    return;
+  }
   if(isUnlocked()){
     const u=getUsage();
     const name=u.clientName?(' · '+u.clientName):'';
@@ -844,17 +857,18 @@ window.addEventListener('load',()=>{
   initCurrencyInputs();
 });
 
-// БЛАГОДІЙНИЙ БАНЕР — ти оновлюєш ці значення вручну
+// ════════════════════════════════════════════════════════════
+// БЛАГОДІЙНИЙ БАНЕР — РЕДАГУЙ ЦІ 4 РЯДКИ ВРУЧНУ
+// Після зміни цифр онови файл на GitHub.
+// ════════════════════════════════════════════════════════════
 const CHARITY_CONFIG = {
-  // Посилання на банку
-  bankUrl: 'https://send.monobank.ua/jar/9KnaSnmkdK',
-  // Сума зібраних коштів (оновлюй вручну в коді)
-  collected: 0,
-  // Кількість клієнтів які підтримали (оновлюй вручну)
-  supporters: 0,
-  // Активний період акції (формат YYYY-MM-DD)
-  endDate: '2026-07-30'
+  bankUrl:   'https://send.monobank.ua/jar/9KnaSnmkdK', // посилання на банку
+  collected: 0,            // ← СУМА зібраних коштів, ₴ (напр. 12500)
+  supporters: 0,           // ← КІЛЬКІСТЬ людей, що підтримали (напр. 13)
+  updated:   '08.06.2026', // ← ДАТА останнього оновлення цифр
+  endDate:   '2026-08-31'  // акція активна до цієї дати (YYYY-MM-DD)
 };
+// ════════════════════════════════════════════════════════════
 
 function initCharityBanner(){
   // Перевіряємо чи акція ще активна
@@ -871,6 +885,8 @@ function initCharityBanner(){
   // Показуємо лічильники
   document.getElementById('charity-amount').textContent=CHARITY_CONFIG.collected.toLocaleString('uk-UA')+' ₴';
   document.getElementById('charity-count').textContent=CHARITY_CONFIG.supporters;
+  const upd=document.getElementById('charity-updated');
+  if(upd) upd.textContent=CHARITY_CONFIG.updated;
   // Трекаємо клік
   document.getElementById('charity-btn').addEventListener('click',()=>{
     if(typeof gtag!=='undefined'){
@@ -1252,7 +1268,6 @@ function calc(){
       <div class="extra-box">
         <div class="extra-title">Додаткові витрати (не податки)</div>
         <div class="extra-grid">
-          <div class="extra-item"><span class="extra-lbl">📋 Плата за нотаріальне оформлення</span><span class="extra-val" style="color:#64748B;font-weight:400;font-size:11px">уточнюйте при оформленні</span></div>
           <div class="extra-item"><span class="extra-lbl">📋 Внесок до Пенсійного фонду (покупець)</span><span class="extra-val" style="color:#64748B;font-weight:400;font-size:11px">уточнюйте при оформленні</span></div>
           
         </div>
@@ -1271,7 +1286,6 @@ function calc(){
       <div class="extra-box">
         <div class="extra-title">Додаткові витрати (не податки)</div>
         <div class="extra-grid">
-          <div class="extra-item"><span class="extra-lbl">📋 Плата за нотаріальне оформлення</span><span class="extra-val" style="color:#64748B;font-weight:400;font-size:11px">уточнюйте при оформленні</span></div>
           <div class="extra-item"><span class="extra-lbl">📋 Внесок до Пенсійного фонду (покупець)</span><span class="extra-val" style="color:#64748B;font-weight:400;font-size:11px">уточнюйте при оформленні</span></div>
           
         </div>
@@ -1382,7 +1396,6 @@ function calcSpadkuv(){
     <div class="extra-box" style="margin-top:8px">
       <div class="extra-title">Додаткові витрати (не податки)</div>
       <div class="extra-grid">
-        <div class="extra-item"><span class="extra-lbl">📋 Плата за нотаріальне оформлення спадщини</span><span class="extra-val" style="color:var(--text-2);font-weight:400;font-size:11px">уточнюйте при оформленні</span></div>
       </div>
     </div>`;
   if(window._recalcRates)window._recalcRates();
@@ -1508,7 +1521,6 @@ function calcHouse(){
     <div class="extra-box">
       <div class="extra-title">Додаткові витрати (не податки)</div>
       <div class="extra-grid">
-        <div class="extra-item"><span class="extra-lbl">📋 Плата за нотаріальне оформлення (по кожному договору)</span><span class="extra-val" style="color:var(--text-2);font-weight:400;font-size:11px">уточнюйте при оформленні</span></div>
         <div class="extra-item"><span class="extra-lbl">📋 Внесок до ПФ — тільки з будинку (покупець)</span><span class="extra-val" style="color:var(--text-2);font-weight:400;font-size:11px">уточнюйте при оформленні</span></div>
       </div>
     </div>`;
