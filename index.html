@@ -1268,12 +1268,32 @@ function calc(){
   const{pdfo,vz}=getRates();
   const pdfoAmt=base*pdfo/100, vzAmt=base*vz/100, total=pdfoAmt+vzAmt;
   const rb=document.getElementById('result-block');
+  // Підстава виникнення/відсутності податку
+  let basisText='';
+  if(propType==='komertsiina'){
+    basisText='Підстава податку: комерційна (нежитлова) нерухомість (ст. 172.2 ПКУ)';
+  } else if(pdfo===0&&vz===0){
+    basisText=(years==='inherited')
+      ?'Успадковане майно, перший продаж — звільнено (ст. 174 ПКУ)'
+      :'У власності понад 3 роки, перший продаж — звільнено (ст. 172.1 ПКУ)';
+  } else if(saleNum>=3){
+    basisText='Підстава податку: третій і наступний продаж за рік (ст. 172.2 ПКУ)';
+  } else if(saleNum===2){
+    basisText='Підстава податку: другий продаж нерухомості за рік (ст. 172.2 ПКУ)';
+  } else if(years==='less'){
+    basisText='Підстава податку: у власності менше 3 років (ст. 172.2 ПКУ)';
+  } else {
+    basisText='Підстава податку: оподатковуваний об\u2019єкт (ст. 172 ПКУ)';
+  }
+  const isExemptCalc=(pdfo===0&&vz===0);
+  const basisHTML=`<div class="basis-note ${isExemptCalc?'exempt':'taxed'}" style="font-size:12px;font-weight:600;margin-top:10px;padding:8px 10px;border-radius:6px;line-height:1.4;${isExemptCalc?'background:#DCFCE7;color:#15803D':'background:#FCEBEB;color:#A32D2D'}">${isExemptCalc?'✓ ':'⚠ '}${basisText}</div>`;
   if(pdfo===0&&vz===0){
-    rb.innerHTML=`<div class="zero-box">Пільга — 0% ПДФО та 0% військового збору</div>
+    rb.innerHTML=`<div class="zero-box" data-basis="${basisText.replace(/"/g,'&quot;')}">Пільга — 0% ПДФО та 0% військового збору</div>
       <div class="result-grid">
         <div class="rcard"><div class="rl">База оподаткування</div><div class="rv">${fmtDual(base)}</div></div>
         <div class="rcard"><div class="rl">Податки разом</div><div class="rv" style="color:#16A34A">0 грн</div></div>
       </div>
+      ${basisHTML}
       <div class="extra-box">
         <div class="extra-title">Додаткові витрати (не податки)</div>
         <div class="extra-grid">
@@ -1288,10 +1308,11 @@ function calc(){
         <div class="rcard"><div class="rl">ПДФО ${pdfo}%</div><div class="rv">${fmt(pdfoAmt)} грн</div></div>
         <div class="rcard"><div class="rl">Військ. збір ${vz}%</div><div class="rv">${fmt(vzAmt)} грн</div></div>
       </div>
-      <div class="total-box">
+      <div class="total-box" data-basis="${basisText.replace(/"/g,'&quot;')}">
         <div><div class="tl">Податки разом</div><div class="tc">${pdfo+vz}% від бази</div></div>
         <div class="tv">${fmtDual(total, true)}</div>
       </div>
+      ${basisHTML}
       <div class="extra-box">
         <div class="extra-title">Додаткові витрати (не податки)</div>
         <div class="extra-grid">
@@ -1725,18 +1746,22 @@ function savePDF(){
       </div>`;
     });
   } else if(zeroBox){
-    objectsHTML=`<div class="zero-card">${zeroBox.innerText}</div>`;
+    const zBasis=zeroBox.getAttribute('data-basis')||'';
+    const zBasisHTML=zBasis?`<div class="obj-basis">✓ ${zBasis}</div>`:'';
+    objectsHTML=`<div class="zero-card">${zeroBox.innerText}</div>${zBasisHTML}`;
   } else if(rcards.length>0){
     let rows='';
     rcards.forEach(c=>{
       const l=c.querySelector('.rl'),v=c.querySelector('.rv');
       if(l&&v){
-        const taxNum=parseFloat(v.innerText.replace(/[^0-9]/g,''))||0;
-        if(l.innerText.includes('ПДФО')&&taxNum>0) chartItems.push({label:'Податок',val:taxNum});
         rows+=`<div class="obj-field"><div class="fl">${l.innerText}</div><div class="fv">${v.innerText}</div></div>`;
       }
     });
-    objectsHTML=`<div class="obj-card"><div class="obj-grid">${rows}</div></div>`;
+    // Підстава податку для квартири/комерційної — з data-basis блоку підсумку
+    const tBox=rb.querySelector('.total-box[data-basis]');
+    const rBasis=tBox?tBox.getAttribute('data-basis'):'';
+    const rBasisHTML=rBasis?`<div class="obj-basis tax">⚠ ${rBasis}</div>`:'';
+    objectsHTML=`<div class="obj-card"><div class="obj-grid">${rows}</div>${rBasisHTML}</div>`;
   }
 
   // Підсумок
@@ -1767,28 +1792,6 @@ function savePDF(){
     });
     if(tot) rHTML+=`<div class="er etot"><span>${tot.children[0]?tot.children[0].innerText:''}</span><span class="ev">${tot.children[1]?tot.children[1].innerText:''}</span></div>`;
     extraHTML=`<div class="extra-card"><div class="sec">Додаткові витрати (не податки)</div>${rHTML}</div>`;
-  }
-
-  // SVG діаграма (горизонтальні бари)
-  let chartHTML='';
-  if(chartItems.length>0){
-    const maxV=Math.max(...chartItems.map(x=>x.val));
-    const rowH=44, w=420, padL=20, barMaxW=260;
-    const svgH=chartItems.length*rowH+20;
-    let bars='';
-    chartItems.forEach((item,i)=>{
-      const y=i*rowH+10;
-      const bw=Math.round((item.val/maxV)*barMaxW);
-      const colors=['#1B2B5E','#D4A017','#0F6E56','#A32D2D'];
-      const col=colors[i%colors.length];
-      const fmt=(item.val/1000).toFixed(0)+' тис. грн';
-      bars+=`<text x="${padL}" y="${y+16}" font-size="11" fill="#64748B" font-family="Arial">${item.label}</text>
-        <rect x="${padL}" y="${y+20}" width="${bw}" height="16" fill="${col}" rx="3"/>
-        <text x="${padL+bw+6}" y="${y+32}" font-size="11" fill="${col}" font-weight="700" font-family="Arial">${fmt}</text>`;
-    });
-    chartHTML=`<div class="chart-card"><div class="sec">Структура податків</div>
-      <svg viewBox="0 0 ${w} ${svgH}" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block">${bars}</svg>
-    </div>`;
   }
 
   const printHTML=`<!DOCTYPE html><html lang="uk"><head><meta charset="UTF-8">
@@ -1846,11 +1849,9 @@ function savePDF(){
   ${objectsHTML}
   ${propValueHTML}
   ${totalHTML}
-  ${chartHTML}
   ${extraHTML}
   <div class="note">⚠️ Орієнтовний розрахунок відповідно до ПКУ України · 2026 р.<br>
-  Проконсультуйтесь з нотаріусом перед укладанням угоди.<br>
-  📞 +38 097 921 3772 · zt.expert@gmail.com</div>
+  Проконсультуйтесь з нотаріусом перед укладанням угоди.</div>
   </body></html>`;
 
   try{
