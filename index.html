@@ -533,11 +533,20 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
   <!-- ТЕРМІН / ПОПЕРЕДНІ ПРОДАЖІ (будинок) -->
   <div id="house-opts" style="display:none">
     <div class="card">
-      <div class="section-label">Термін у власності (обох об'єктів)</div>
+      <div class="section-label">🏡 Будинок — термін у власності</div>
       <div class="toggle-row">
         <button class="tog on" id="hy-more"      onclick="setHouseYears('more')">Більше 3 років</button>
         <button class="tog"    id="hy-less"      onclick="setHouseYears('less')">Менше 3 років</button>
         <button class="tog"    id="hy-inherited" onclick="setHouseYears('inherited')">Спадщина</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="section-label">📍 Ділянка під будинком — термін у власності</div>
+      <div class="info-note" style="margin-bottom:8px">Якщо ділянку приватизовано/набуто раніше за будинок — строки рахуються окремо</div>
+      <div class="toggle-row">
+        <button class="tog on" id="ly-more"      onclick="setLandYears('more')">Більше 3 років</button>
+        <button class="tog"    id="ly-less"      onclick="setLandYears('less')">Менше 3 років</button>
+        <button class="tog"    id="ly-inherited" onclick="setLandYears('inherited')">Спадщина</button>
       </div>
     </div>
     <div class="card">
@@ -1142,7 +1151,7 @@ window.addEventListener('appinstalled',()=>{document.getElementById('install-ban
 function installApp(){if(deferredPrompt){deferredPrompt.prompt();deferredPrompt.userChoice.then(()=>{deferredPrompt=null})}}
 
 let propType='zhytlova', years='more', saleNum=1;
-let houseYears='more', housePriorSales=0;
+let houseYears='more', landYears='more', housePriorSales=0;
 let evalManuallyEdited=false, houseEvalManual=false, landEvalManual=false;
 
 function setType(t){
@@ -1161,6 +1170,7 @@ function setType(t){
 function setYears(y){years=y;['more','less','inherited'].forEach(v=>document.getElementById('y-'+v).className='tog'+(v===y?' on':''));calc()}
 function setSale(n){saleNum=n;[1,2,3].forEach(v=>document.getElementById('s-'+v).className='tog'+(v===n?' on':''));calc()}
 function setHouseYears(y){houseYears=y;['more','less','inherited'].forEach(v=>document.getElementById('hy-'+v).className='tog'+(v===y?' on':''));calc()}
+function setLandYears(y){landYears=y;['more','less','inherited'].forEach(v=>document.getElementById('ly-'+v).className='tog'+(v===y?' on':''));calc()}
 function setHousePriorSales(n){housePriorSales=n;[0,1,2].forEach(v=>document.getElementById('hs-'+v).className='tog'+(v===n?' on':''));calc()}
 
 let osgEnabled=false;
@@ -1415,32 +1425,38 @@ function calcHouse(){
   if(!obj1Base&&!oBase&&!zBase){rb.innerHTML='<div class="hint" style="text-align:center;padding:1rem;color:#94A3B8">Введіть вартість будинку та/або ділянок</div>';return}
 
   // Формуємо масив об'єктів
+  // Будинок і ділянка під ним — ОДИН договір (один продаж у черзі 172.1),
+  // але кожна частина бази оподатковується за СВОЇМ строком володіння
   let objects=[];
-  if(obj1Base) objects.push({base:obj1Base,houseBase:hBase,lbl:'🏡 Будинок + ділянка під будинком',isOSG:false,isZabud:false});
-  if(oBase)    objects.push({base:oBase,houseBase:0,lbl:'🌾 Ділянка ОСГ',isOSG:true,isZabud:false});
-  if(zBase)    objects.push({base:zBase,houseBase:0,lbl:'🏗 Ділянка під забудову',isOSG:false,isZabud:true});
+  if(hBase) objects.push({base:hBase,houseBase:hBase,lbl:'🏡 Будинок',years:houseYears,isHouse:true,isUnderHouse:true,isOSG:false,isZabud:false});
+  if(lBase) objects.push({base:lBase,houseBase:0,lbl:'📍 Ділянка під будинком',years:landYears,isLand:true,isUnderHouse:true,isOSG:false,isZabud:false});
+  if(oBase)    objects.push({base:oBase,houseBase:0,lbl:'🌾 Ділянка ОСГ',years:houseYears,isOSG:true,isZabud:false});
+  if(zBase)    objects.push({base:zBase,houseBase:0,lbl:'🏗 Ділянка під забудову',years:houseYears,isOSG:false,isZabud:true});
 
   // ЛОГІКА згідно ст. 172 ПКУ:
-  // - Будинок + ділянка під будинком = 1 об'єкт (об'єднані в obj1Base)
-  // - Кожна наступна ділянка (ОСГ, забудова) = окремий об'єкт
-  // - Приватизована ОСГ — звільнена від ПДФО+ВЗ (ст. 172.1), але РАХУЄТЬСЯ як об'єкт у черзі!
-  
-  // НЕ сортуємо — порядок такий як вводить користувач:
-  // ЛОГІКА згідно ст. 172 ПКУ:
-  // Будинок+ділянка та приватизована ОСГ — обидва об'єкти п.172.1
-  // Звільнення "один раз на рік" діє ТІЛЬКИ для 1-го продажу
-  // 2-й об'єкт 172.1 → 5%+5% (п.172.2), 3-й і наступні → 18%+5%
-  
+  // - Будинок + ділянка під ним = ОДИН договір/продаж (ст. 377 ЦК), займає одну позицію в черзі
+  // - Кожна частина оподатковується за своїм строком: будинок <3р → 5%+5%, ділянка >3р → 0%
+  // - Кожна додаткова ділянка (ОСГ, забудова) = окремий продаж у черзі
+  // - Звільнення 172.1 (перший продаж + >3 роки) діє в межах першої позиції черги
+  // - Приватизована ОСГ — об'єкт 172.1, звільнена лише як 1-й продаж
+
   let saleCounter=housePriorSales;
+  let underHouseSaleN=null; // спільний номер продажу для будинку+ділянки під ним
   objects.forEach(obj=>{
-    saleCounter++;
-    obj.saleN=saleCounter;
-    if(obj.isOSG&&osgPrivatized&&saleCounter===1){
+    if(obj.isUnderHouse){
+      if(underHouseSaleN===null){saleCounter++;underHouseSaleN=saleCounter;}
+      obj.saleN=underHouseSaleN;
+    } else {
+      saleCounter++;
+      obj.saleN=saleCounter;
+    }
+    const oy=obj.years||houseYears;
+    if(obj.isOSG&&osgPrivatized&&obj.saleN===1){
       // Приватизована ОСГ як 1-й (єдиний) продаж — звільнена ст.172.1
       obj.r={pdfo:0,vz:0};obj.tax=0;obj.exempted=true;
     } else {
-      // Всі інші випадки — за чергою продажу
-      obj.r=getRatesFor(houseYears,saleCounter);
+      // Ставка за чергою продажу + строком конкретного об'єкта
+      obj.r=getRatesFor(oy,obj.saleN);
       obj.tax=obj.base*(obj.r.pdfo+obj.r.vz)/100;
       obj.exempted=(obj.r.pdfo===0&&obj.r.vz===0);
     }
@@ -1458,13 +1474,14 @@ function calcHouse(){
     const isOSGexempt=obj.isOSG&&osgPrivatized&&obj.saleN===1;
     const saleLabel=`${obj.saleN}-й продаж цього року`;
     const saleStyle=isZero?'background:#DCFCE7;color:#15803D':'';
-    const baseDetail=obj.houseBase>0&&lBase>0
-      ?`<div style="font-size:11px;color:#64748B;margin-top:3px">Будинок: ${fmt(obj.houseBase)} + Ділянка: ${fmt(lBase)} грн</div>`:'';
+    const yearLbl={more:'у власності > 3 років',less:'у власності < 3 років',inherited:'успадковано'}[obj.years||houseYears]||'';
+    const baseDetail=(obj.isHouse||obj.isLand)&&yearLbl
+      ?`<div style="font-size:11px;color:#64748B;margin-top:3px">${yearLbl}</div>`:'';
     let bottomNote='';
     if(isOSGexempt){
       bottomNote='<div style="font-size:11px;color:#16A34A;font-weight:600;margin-top:4px">✓ Приватизована ОСГ як перший продаж — звільнена (ст. 172.1 ПКУ)</div>';
     } else if(isZero){
-      bottomNote='<div style="font-size:11px;color:#16A34A;font-weight:600;margin-top:4px">✓ Перший продаж, у власності понад 3 роки — 0%</div>';
+      bottomNote='<div style="font-size:11px;color:#16A34A;font-weight:600;margin-top:4px">✓ Звільнено від оподаткування (ст. 172.1 ПКУ)</div>';
     }
     return`<div class="obj-block">
       <div class="obj-title">${obj.lbl} <span class="sale-badge" style="${saleStyle}">${saleLabel}</span></div>
@@ -1478,7 +1495,7 @@ function calcHouse(){
   }
 
   const ruleBanner=`<div style="background:#EBF4FF;border-left:3px solid #378ADD;border-radius:0 8px 8px 0;padding:8px 12px;font-size:12px;color:#185FA5;font-weight:500;margin-bottom:10px">
-    📜 Згідно ст. 172 ПКУ: будинок + ділянка під ним = 1 об'єкт. Кожна додаткова ділянка — окремий продаж.
+    📜 Будинок і ділянка під ним — один договір (один продаж за ст. 172 ПКУ). Кожна частина оподатковується за своїм строком володіння: будинок &lt; 3 роки — 5%+5%, ділянка &gt; 3 роки — 0%.
   </div>`;
   
   // Деталізація суми податків по об'єктах
