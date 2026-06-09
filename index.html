@@ -1477,13 +1477,35 @@ function calcHouse(){
     const yearLbl={more:'у власності > 3 років',less:'у власності < 3 років',inherited:'успадковано'}[obj.years||houseYears]||'';
     const baseDetail=(obj.isHouse||obj.isLand)&&yearLbl
       ?`<div style="font-size:11px;color:#64748B;margin-top:3px">${yearLbl}</div>`:'';
+    // Підстава виникнення/відсутності податку
+    let basisText='';
+    if(isOSGexempt){
+      basisText='Приватизована ОСГ, перший продаж — звільнено (ст. 172.1 ПКУ)';
+    } else if(isZero){
+      basisText=(obj.years==='inherited')
+        ?'Успадковане майно, перший продаж — звільнено (ст. 174 ПКУ)'
+        :'У власності понад 3 роки, перший продаж — звільнено (ст. 172.1 ПКУ)';
+    } else {
+      // Оподатковується — пояснюємо чому
+      if((obj.years||houseYears)==='less'&&obj.saleN===1){
+        basisText='Підстава податку: у власності менше 3 років (ст. 172.2 ПКУ)';
+      } else if(obj.saleN===2){
+        basisText='Підстава податку: другий продаж нерухомості за рік (ст. 172.2 ПКУ)';
+      } else if(obj.saleN>=3){
+        basisText='Підстава податку: третій і наступний продаж за рік (ст. 172.2 ПКУ)';
+      } else {
+        basisText='Підстава податку: оподатковуваний об\u2019єкт (ст. 172 ПКУ)';
+      }
+    }
     let bottomNote='';
     if(isOSGexempt){
       bottomNote='<div style="font-size:11px;color:#16A34A;font-weight:600;margin-top:4px">✓ Приватизована ОСГ як перший продаж — звільнена (ст. 172.1 ПКУ)</div>';
     } else if(isZero){
-      bottomNote='<div style="font-size:11px;color:#16A34A;font-weight:600;margin-top:4px">✓ Звільнено від оподаткування (ст. 172.1 ПКУ)</div>';
+      bottomNote='<div style="font-size:11px;color:#16A34A;font-weight:600;margin-top:4px">✓ Звільнено від оподаткування ('+(obj.years==='inherited'?'ст. 174':'ст. 172.1')+' ПКУ)</div>';
+    } else {
+      bottomNote='<div style="font-size:11px;color:#A32D2D;font-weight:600;margin-top:4px">⚠ '+basisText+'</div>';
     }
-    return`<div class="obj-block">
+    return`<div class="obj-block" data-basis="${basisText.replace(/"/g,'&quot;')}" data-base="${Math.round(obj.base)}">
       <div class="obj-title">${obj.lbl} <span class="sale-badge" style="${saleStyle}">${saleLabel}</span></div>
       <div class="result-grid">
         <div class="rcard"><div class="rl">База оподаткування</div><div class="rv">${fmtDual(obj.base)}</div>${baseDetail}</div>
@@ -1530,6 +1552,10 @@ function calcHouse(){
     <div class="section-label">${objects.length} об'єкт(и) оподаткування</div>
     ${objects.map(o=>objBlock(o)).join('')}
     ${breakdownBlock}
+    <div class="total-box" id="property-value-box" data-propvalue="${Math.round(notarBase)}" style="margin-top:10px;background:#F4F6FB;border:1px solid #D9E2F2">
+      <div><div class="tl" style="color:#64748B">Загальна вартість майна (будинок + земля)</div></div>
+      <div class="tv" style="color:#1B2B5E">${fmtDual(notarBase, true)}</div>
+    </div>
     <div class="total-box" style="margin-top:10px">
       <div><div class="tl">Податки разом (всі об'єкти)</div></div>
       <div class="tv">${fmtDual(totalTax, true)}</div>
@@ -1662,7 +1688,9 @@ function savePDF(){
 
   // Збираємо структуровані блоки
   const objBlocks=rb.querySelectorAll('.obj-block');
-  const totalBox=rb.querySelector('.total-box');
+  const totalBoxes=rb.querySelectorAll('.total-box');
+  // Останній .total-box — це підсумок податків (перший може бути блоком вартості майна)
+  const totalBox=Array.from(totalBoxes).find(b=>b.id!=='property-value-box')||null;
   const extraBox=rb.querySelector('.extra-box');
   const zeroBox=rb.querySelector('.zero-box');
   const rcards=rb.querySelectorAll('.rcard');
@@ -1676,6 +1704,7 @@ function savePDF(){
       const badge=block.querySelector('.sale-badge');
       const cards=block.querySelectorAll('.rcard');
       const noteEl=block.querySelector('div[style*="color:#16A34A"]');
+      const basisText=block.getAttribute('data-basis')||'';
       const titleText=titleEl?(titleEl.innerText.replace(badge?badge.innerText:'','').trim()):'';
       const badgeText=badge?badge.innerText:'';
       let baseVal='',taxVal='',taxNum=0;
@@ -1685,13 +1714,14 @@ function savePDF(){
         if(i===1&&v){taxVal=v.innerText;taxNum=parseFloat(taxVal.replace(/[^0-9]/g,''))||0;}
       });
       if(taxNum>0) chartItems.push({label:titleText.substring(0,18),val:taxNum});
+      const basisHTML=basisText?`<div class="obj-basis ${taxNum>0?'tax':''}">${taxNum>0?'⚠ ':'✓ '}${basisText}</div>`:'';
       objectsHTML+=`<div class="obj-card">
         <div class="obj-hdr"><div class="obj-name">${titleText}</div><div class="obj-badge">${badgeText}</div></div>
         <div class="obj-grid">
           <div class="obj-field"><div class="fl">База оподаткування</div><div class="fv">${baseVal}</div></div>
           <div class="obj-field"><div class="fl">Податок (ПДФО + ВЗ)</div><div class="fv tax">${taxVal}</div></div>
         </div>
-        ${noteEl?`<div class="obj-note">${noteEl.innerText}</div>`:''}
+        ${basisHTML}
       </div>`;
     });
   } else if(zeroBox){
@@ -1710,7 +1740,15 @@ function savePDF(){
   }
 
   // Підсумок
-  let totalHTML='',extraHTML='';
+  let totalHTML='',extraHTML='',propValueHTML='';
+  const propBox=rb.querySelector('#property-value-box');
+  if(propBox){
+    const pv=propBox.querySelector('.tv');
+    propValueHTML=`<div class="prop-card">
+      <div class="pl">Загальна вартість майна (будинок + земля)</div>
+      <div class="pv">${pv?pv.innerText:''}</div>
+    </div>`;
+  }
   if(totalBox){
     const tl=totalBox.querySelector('.tl'),tv=totalBox.querySelector('.tv'),tc=totalBox.querySelector('.tc');
     const totNum=parseFloat(tv?tv.innerText.replace(/[^0-9]/g,''):'0')||0;
@@ -1775,6 +1813,11 @@ function savePDF(){
     .fv{font-size:15px;font-weight:700;color:#1B2B5E}
     .fv.tax{color:#A32D2D}
     .obj-note{font-size:11px;color:#16A34A;font-weight:600;margin-top:8px;padding-top:8px;border-top:1px solid #E2E8F0}
+    .obj-basis{font-size:11px;font-weight:600;margin-top:8px;padding-top:8px;border-top:1px solid #E2E8F0;color:#16A34A;line-height:1.4}
+    .obj-basis.tax{color:#A32D2D}
+    .prop-card{background:#F4F6FB;border:1px solid #D9E2F2;border-radius:10px;padding:13px 16px;display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px}
+    .prop-card .pl{font-size:12px;font-weight:600;color:#64748B}
+    .prop-card .pv{font-size:18px;font-weight:700;color:#1B2B5E;white-space:nowrap}
     .zero-card{background:#DCFCE7;border-radius:8px;padding:14px;text-align:center;font-size:15px;font-weight:700;color:#15803D;margin-bottom:10px}
     .total-card{background:#1B2B5E;border-radius:10px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
     .tl2{font-size:12px;font-weight:600;color:#A0B4E8}
@@ -1801,6 +1844,7 @@ function savePDF(){
   </div>
   <div class="sec" style="margin-bottom:10px">Об'єкти оподаткування</div>
   ${objectsHTML}
+  ${propValueHTML}
   ${totalHTML}
   ${chartHTML}
   ${extraHTML}
