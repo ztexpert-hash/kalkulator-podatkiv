@@ -18,6 +18,40 @@
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
   gtag('config', 'G-RY054NG4Q5');
+
+  // ===== Єдина точка аналітики: GA + Google-таблиця (Apps Script) =====
+  var ANALYTICS_URL = 'https://script.google.com/macros/s/AKfycbx-HFT7w5zzqCtrpw8Gdl2bu9HW63MGZtHiNcSrp-QwjGkEp4VPNsZVXJsaLRMCpPbwUw/exec';
+  function edDeviceId(){
+    try{
+      var id=localStorage.getItem('ed_device_id');
+      if(!id){id='DEV-'+Math.random().toString(36).substr(2,9).toUpperCase()+'-'+Date.now().toString(36).toUpperCase();localStorage.setItem('ed_device_id',id);}
+      return id;
+    }catch(e){return 'DEV-NA';}
+  }
+  function track(event,label,value){
+    // 1) Google Analytics
+    try{ if(typeof gtag!=='undefined'){ gtag('event',event,{'event_category':'Аналітика','event_label':label||'','value':value||0}); } }catch(e){}
+    // 2) Google-таблиця (не блокує сторінку, помилки ігноруємо)
+    try{
+      var u=ANALYTICS_URL
+        +'?event='+encodeURIComponent(event)
+        +'&label='+encodeURIComponent(label||'')
+        +'&device='+encodeURIComponent(edDeviceId())
+        +'&value='+encodeURIComponent(value||'')
+        +'&t='+Date.now();
+      var img=new Image(); img.src=u;
+    }catch(e){}
+  }
+  // Подія відкриття + одноразова реєстрація нового пристрою
+  window.addEventListener('load',function(){
+    try{
+      track('app_open','');
+      if(!localStorage.getItem('ed_device_registered')){
+        track('new_device', (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)?'pwa':'browser');
+        localStorage.setItem('ed_device_registered','1');
+      }
+    }catch(e){}
+  });
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -731,14 +765,8 @@ function incrementCalc(){
     u.count++;
     saveUsage(u);
     updateCounter();
-    // Відправляємо подію в Google Analytics
-    if(typeof gtag!=='undefined'){
-      gtag('event','calculation',{
-        'event_category':'Калькулятор',
-        'event_label': propType||'zhytlova',
-        'value': Math.round(currentBase)
-      });
-    }
+    // Відправляємо подію в Google Analytics + Google-таблицю
+    try{ track('calculation', propType||'zhytlova', Math.round(currentBase)); }catch(e){}
     if(u.count>=FREE_LIMIT) showPaywall();
   }, 2000);
 }
@@ -1147,7 +1175,7 @@ function checkForUpdate(){
 
 let deferredPrompt=null;
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;document.getElementById('install-banner').style.display='flex'});
-window.addEventListener('appinstalled',()=>{document.getElementById('install-banner').style.display='none'});
+window.addEventListener('appinstalled',()=>{document.getElementById('install-banner').style.display='none';try{track('pwa_installed','')}catch(e){}});
 function installApp(){if(deferredPrompt){deferredPrompt.prompt();deferredPrompt.userChoice.then(()=>{deferredPrompt=null})}}
 
 let propType='zhytlova', years='more', saleNum=1;
