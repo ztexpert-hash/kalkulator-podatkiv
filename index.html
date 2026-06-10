@@ -47,6 +47,26 @@
     else if(/Safari\//.test(ua))br='Safari';
     return {os:os, br:br};
   }
+  // Розпізнавання ботів/краулерів прев'ю (Meta, Google, Telegram, Twitter тощо)
+  function edDetectBot(){
+    try{
+      var ua=(navigator.userAgent||'').toLowerCase();
+      var pats=[
+        ['facebookexternalhit','Meta'],['facebot','Meta'],['instagram','Meta'],
+        ['meta-external','Meta'],['whatsapp','WhatsApp'],
+        ['telegrambot','Telegram'],['twitterbot','Twitter'],['discordbot','Discord'],
+        ['slackbot','Slack'],['linkedinbot','LinkedIn'],['pinterest','Pinterest'],
+        ['googlebot','Google'],['google-inspectiontool','Google'],['bingbot','Bing'],
+        ['yandexbot','Yandex'],['applebot','Apple'],['duckduckbot','DuckDuckGo'],
+        ['petalbot','Petal'],['bytespider','ByteDance'],['ahrefsbot','Ahrefs'],
+        ['semrushbot','Semrush'],['mj12bot','Majestic'],['dotbot','Moz'],
+        ['headlesschrome','Headless'],['phantomjs','Phantom'],['python-requests','Script'],
+        ['curl/','Script'],['wget/','Script'],['bot','Bot'],['crawler','Crawler'],['spider','Spider']
+      ];
+      for(var i=0;i<pats.length;i++){ if(ua.indexOf(pats[i][0])!==-1) return pats[i][1]; }
+    }catch(e){}
+    return '';
+  }
   // Повний контекст про клієнта. Статичні поля (пристрій/ОС/екран/джерело)
   // кешуються; динамічні (unlocked/code/calc_count) читаються свіжо при кожному виклику.
   function edClientInfo(){
@@ -57,6 +77,7 @@
         var ua=navigator.userAgent||'';
         var p=edParseUA(ua);
         ci.os=p.os; ci.browser=p.br;
+        ci.bot=edDetectBot();
         ci.device=(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)?'pwa'
                  :(/Mobi|Android|iPhone|iPad/.test(ua)?'mobile':'desktop');
         ci.lang=(navigator.language||'?');
@@ -107,6 +128,7 @@
         +'&device='+encodeURIComponent(edDeviceId())
         +'&value='+encodeURIComponent(value||'')
         +'&dev_type='+encodeURIComponent(ci.device||'')
+        +'&bot='+encodeURIComponent(ci.bot||'')
         +'&os='+encodeURIComponent(ci.os||'')
         +'&browser='+encodeURIComponent(ci.browser||'')
         +'&lang='+encodeURIComponent(ci.lang||'')
