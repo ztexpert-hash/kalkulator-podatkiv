@@ -898,6 +898,22 @@ function incrementCalc(){
   }, 2000);
 }
 
+// Трекінг розрахунку для аналітики — працює ЗАВЖДИ (і в безкоштовний період,
+// і для розблокованих клієнтів), на відміну від incrementCalc (лічильник спроб).
+function trackCalculation(){
+  const base=getCurrentBase();
+  if(!base || base===0) return;
+  if(window._trackCalcDebounce) clearTimeout(window._trackCalcDebounce);
+  window._trackCalcDebounce=setTimeout(()=>{
+    const currentBase=getCurrentBase();
+    if(!currentBase || currentBase===0) return;
+    // Не шлемо двічі ту саму суму поспіль
+    if(currentBase===window._lastTrackedBase) return;
+    window._lastTrackedBase=currentBase;
+    try{ track('calculation', propType||'zhytlova', Math.round(currentBase)); }catch(e){}
+  }, 2000);
+}
+
 function updateCounter(){
   const bar=document.getElementById('counter-bar');
   if(!bar) return;
@@ -1502,6 +1518,7 @@ function calc(){
   }).join('');
   if(window._recalcRates)window._recalcRates();
   incrementCalc();
+  trackCalculation();
 }
 
 let spStep=1;
@@ -1585,6 +1602,7 @@ function calcSpadkuv(){
     </div>`;
   if(window._recalcRates)window._recalcRates();
   incrementCalc();
+  trackCalculation();
 }
 
 function calcHouse(){
@@ -1745,6 +1763,7 @@ function calcHouse(){
     </div>`;
   if(window._recalcRates)window._recalcRates();
   incrementCalc();
+  trackCalculation();
 }
 
 const RATES_DATA=[
