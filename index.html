@@ -28,23 +28,150 @@
       return id;
     }catch(e){return 'DEV-NA';}
   }
+  // Розпізнавання ОС/браузера з userAgent (легке, без зовнішніх бібліотек)
+  function edParseUA(ua){
+    ua=ua||'';
+    var os='?';
+    if(/Windows NT 10/.test(ua))os='Windows 10/11';
+    else if(/Windows NT/.test(ua))os='Windows';
+    else if(/iPhone|iPad|iPod/.test(ua))os='iOS';
+    else if(/Android/.test(ua)){var am=ua.match(/Android ([0-9.]+)/);os='Android'+(am?' '+am[1]:'');}
+    else if(/Mac OS X/.test(ua))os='macOS';
+    else if(/Linux/.test(ua))os='Linux';
+    var br='?';
+    if(/Edg\//.test(ua))br='Edge';
+    else if(/OPR\/|Opera/.test(ua))br='Opera';
+    else if(/SamsungBrowser/.test(ua))br='Samsung';
+    else if(/Chrome\//.test(ua))br='Chrome';
+    else if(/Firefox\//.test(ua))br='Firefox';
+    else if(/Safari\//.test(ua))br='Safari';
+    return {os:os, br:br};
+  }
+  // Повний контекст про клієнта. Статичні поля (пристрій/ОС/екран/джерело)
+  // кешуються; динамічні (unlocked/code/calc_count) читаються свіжо при кожному виклику.
+  function edClientInfo(){
+    var ci=window._edCI;
+    if(!ci){
+      ci={};
+      try{
+        var ua=navigator.userAgent||'';
+        var p=edParseUA(ua);
+        ci.os=p.os; ci.browser=p.br;
+        ci.device=(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)?'pwa'
+                 :(/Mobi|Android|iPhone|iPad/.test(ua)?'mobile':'desktop');
+        ci.lang=(navigator.language||'?');
+        try{ ci.tz=Intl.DateTimeFormat().resolvedOptions().timeZone||'?'; }catch(e){ ci.tz='?'; }
+        ci.screen=(window.screen?(screen.width+'x'+screen.height):'?');
+        ci.viewport=(window.innerWidth+'x'+window.innerHeight);
+        ci.dpr=(window.devicePixelRatio||1);
+        ci.platform=(navigator.platform||'?');
+        ci.cores=(navigator.hardwareConcurrency||'?');
+        ci.mem=(navigator.deviceMemory||'?');
+        ci.touch=(('ontouchstart' in window)||navigator.maxTouchPoints>0)?1:0;
+        // Джерело візиту
+        ci.ref=(document.referrer||'')||'(прямий)';
+        try{
+          var qs=new URLSearchParams(location.search);
+          ci.utm_source=qs.get('utm_source')||'';
+          ci.utm_medium=qs.get('utm_medium')||'';
+          ci.utm_campaign=qs.get('utm_campaign')||'';
+        }catch(e){}
+      }catch(e){}
+      window._edCI=ci;
+    }
+    // Динамічні поля — завжди актуальні
+    try{
+      var us=JSON.parse(localStorage.getItem('ed_usage')||'{}');
+      ci.unlocked=(us.unlocked?1:0);
+      ci.code=(us.code||'');
+      ci.calc_count=(us.count||0);
+    }catch(e){}
+    // Гео (з кешу, заповнюється асинхронно edFetchGeo)
+    try{
+      var g=JSON.parse(localStorage.getItem('ed_geo')||'{}');
+      ci.ip=g.ip||''; ci.country=g.country||''; ci.region=g.region||'';
+      ci.city=g.city||''; ci.org=g.org||'';
+    }catch(e){}
+    return ci;
+  }
   function track(event,label,value){
     // 1) Google Analytics
     try{ if(typeof gtag!=='undefined'){ gtag('event',event,{'event_category':'Аналітика','event_label':label||'','value':value||0}); } }catch(e){}
     // 2) Google-таблиця (не блокує сторінку, помилки ігноруємо)
+    // Примітка: IP, країну й місто за IP визначає вже сам Apps Script на боці сервера
     try{
+      var ci=edClientInfo();
       var u=ANALYTICS_URL
         +'?event='+encodeURIComponent(event)
         +'&label='+encodeURIComponent(label||'')
         +'&device='+encodeURIComponent(edDeviceId())
         +'&value='+encodeURIComponent(value||'')
+        +'&dev_type='+encodeURIComponent(ci.device||'')
+        +'&os='+encodeURIComponent(ci.os||'')
+        +'&browser='+encodeURIComponent(ci.browser||'')
+        +'&lang='+encodeURIComponent(ci.lang||'')
+        +'&tz='+encodeURIComponent(ci.tz||'')
+        +'&screen='+encodeURIComponent(ci.screen||'')
+        +'&viewport='+encodeURIComponent(ci.viewport||'')
+        +'&dpr='+encodeURIComponent(ci.dpr||'')
+        +'&platform='+encodeURIComponent(ci.platform||'')
+        +'&cores='+encodeURIComponent(ci.cores||'')
+        +'&mem='+encodeURIComponent(ci.mem||'')
+        +'&touch='+encodeURIComponent(ci.touch||'')
+        +'&ref='+encodeURIComponent(ci.ref||'')
+        +'&utm_source='+encodeURIComponent(ci.utm_source||'')
+        +'&utm_medium='+encodeURIComponent(ci.utm_medium||'')
+        +'&utm_campaign='+encodeURIComponent(ci.utm_campaign||'')
+        +'&unlocked='+encodeURIComponent(ci.unlocked||'')
+        +'&code='+encodeURIComponent(ci.code||'')
+        +'&calc_count='+encodeURIComponent(ci.calc_count||'')
+        +'&ip='+encodeURIComponent(ci.ip||'')
+        +'&country='+encodeURIComponent(ci.country||'')
+        +'&region='+encodeURIComponent(ci.region||'')
+        +'&city='+encodeURIComponent(ci.city||'')
+        +'&org='+encodeURIComponent(ci.org||'')
         +'&t='+Date.now();
       var img=new Image(); img.src=u;
+    }catch(e){}
+  }
+  // Гео за IP (один запит на день, кешується в localStorage)
+  function edFetchGeo(){
+    try{
+      var raw=localStorage.getItem('ed_geo');
+      if(raw){
+        var g=JSON.parse(raw);
+        // Кеш дійсний 24 год
+        if(g._t && (Date.now()-g._t) < 86400000) return;
+      }
+    }catch(e){}
+    try{
+      fetch('https://ipapi.co/json/',{cache:'no-store'})
+        .then(function(r){return r.ok?r.json():null;})
+        .then(function(d){
+          if(!d) return;
+          var g={
+            ip:d.ip||'', country:d.country_name||d.country||'',
+            region:d.region||'', city:d.city||'', org:d.org||'',
+            _t:Date.now()
+          };
+          try{ localStorage.setItem('ed_geo',JSON.stringify(g)); }catch(e){}
+          // Якщо гео отримано вже після app_open — фіксуємо окремою подією,
+          // щоб у таблиці точно був рядок із повним гео
+          try{
+            if(window._edCI){ window._edCI._geoReady=1; }
+            if(!sessionStorage.getItem('ed_geo_pinged')){
+              track('geo_resolved', g.country+(g.city?' / '+g.city:''));
+              sessionStorage.setItem('ed_geo_pinged','1');
+            }
+          }catch(e){}
+        })
+        .catch(function(){});
     }catch(e){}
   }
   // Подія відкриття + одноразова реєстрація нового пристрою
   window.addEventListener('load',function(){
     try{
+      edFetchGeo();
       track('app_open','');
       if(!localStorage.getItem('ed_device_registered')){
         track('new_device', (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)?'pwa':'browser');
