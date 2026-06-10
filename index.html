@@ -371,7 +371,7 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
     <div class="card" style="margin-bottom:0;border-radius:0 0 14px 14px;border-top:none">
       <table class="rt"><thead><tr><th>Ситуація</th><th>ПДФО</th><th>Військ. збір</th><th>Разом</th></tr></thead>
       <tbody id="rates-tbody"></tbody></table>
-      <div class="rt-note">Окремо від податків: внесок до Пенсійного фонду — уточнюйте при оформленні</div>
+      <div class="rt-note">Окремо від податків: плата за нотаріальне оформлення та внесок до Пенсійного фонду — уточнюйте у нотаріуса</div>
     </div>
   </div>
 
@@ -1325,8 +1325,8 @@ function calc(){
       <div class="extra-box">
         <div class="extra-title">Додаткові витрати (не податки)</div>
         <div class="extra-grid">
-          <div class="extra-item"><span class="extra-lbl">📋 Внесок до Пенсійного фонду (покупець)</span><span class="extra-val" style="color:#64748B;font-weight:400;font-size:11px">уточнюйте при оформленні</span></div>
-          
+          <div class="extra-item"><span class="extra-lbl">📋 Плата за нотаріальне оформлення</span><span class="extra-val" style="color:#64748B;font-weight:400;font-size:11px">уточнюйте у нотаріуса</span></div>
+          <div class="extra-item"><span class="extra-lbl">📋 Внесок до Пенсійного фонду (покупець)</span><span class="extra-val" style="color:#64748B;font-weight:400;font-size:11px">уточнюйте у нотаріуса</span></div>
         </div>
       </div>`;
   } else {
@@ -1344,8 +1344,8 @@ function calc(){
       <div class="extra-box">
         <div class="extra-title">Додаткові витрати (не податки)</div>
         <div class="extra-grid">
-          <div class="extra-item"><span class="extra-lbl">📋 Внесок до Пенсійного фонду (покупець)</span><span class="extra-val" style="color:#64748B;font-weight:400;font-size:11px">уточнюйте при оформленні</span></div>
-          
+          <div class="extra-item"><span class="extra-lbl">📋 Плата за нотаріальне оформлення</span><span class="extra-val" style="color:#64748B;font-weight:400;font-size:11px">уточнюйте у нотаріуса</span></div>
+          <div class="extra-item"><span class="extra-lbl">📋 Внесок до Пенсійного фонду (покупець)</span><span class="extra-val" style="color:#64748B;font-weight:400;font-size:11px">уточнюйте у нотаріуса</span></div>
         </div>
       </div>`;
   }
@@ -1612,7 +1612,8 @@ function calcHouse(){
     <div class="extra-box">
       <div class="extra-title">Додаткові витрати (не податки)</div>
       <div class="extra-grid">
-        <div class="extra-item"><span class="extra-lbl">📋 Внесок до ПФ — тільки з будинку (покупець)</span><span class="extra-val" style="color:var(--text-2);font-weight:400;font-size:11px">уточнюйте при оформленні</span></div>
+        <div class="extra-item"><span class="extra-lbl">📋 Плата за нотаріальне оформлення (по кожному договору)</span><span class="extra-val" style="color:var(--text-2);font-weight:400;font-size:11px">уточнюйте у нотаріуса</span></div>
+        <div class="extra-item"><span class="extra-lbl">📋 Внесок до ПФ — тільки з будинку (покупець)</span><span class="extra-val" style="color:var(--text-2);font-weight:400;font-size:11px">уточнюйте у нотаріуса</span></div>
       </div>
     </div>`;
   if(window._recalcRates)window._recalcRates();
