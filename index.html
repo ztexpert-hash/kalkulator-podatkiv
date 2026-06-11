@@ -1123,7 +1123,7 @@ function checkForUpdate(){
 
 let deferredPrompt=null;
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;document.getElementById('install-banner').style.display='flex'});
-window.addEventListener('appinstalled',()=>{document.getElementById('install-banner').style.display='none'});
+window.addEventListener('appinstalled',()=>{document.getElementById('install-banner').style.display='none';if(typeof gtag!=='undefined'){gtag('event','app_installed',{'event_category':'PWA','event_label':'install'});}});
 function installApp(){if(deferredPrompt){deferredPrompt.prompt();deferredPrompt.userChoice.then(()=>{deferredPrompt=null})}}
 
 let propType='zhytlova', years='more', saleNum=1;
