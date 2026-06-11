@@ -128,7 +128,6 @@
         +'&device='+encodeURIComponent(edDeviceId())
         +'&value='+encodeURIComponent(value||'')
         +'&dev_type='+encodeURIComponent(ci.device||'')
-        +'&bot='+encodeURIComponent(ci.bot||'')
         +'&os='+encodeURIComponent(ci.os||'')
         +'&browser='+encodeURIComponent(ci.browser||'')
         +'&lang='+encodeURIComponent(ci.lang||'')
@@ -152,6 +151,7 @@
         +'&region='+encodeURIComponent(ci.region||'')
         +'&city='+encodeURIComponent(ci.city||'')
         +'&org='+encodeURIComponent(ci.org||'')
+        +'&bot='+encodeURIComponent(ci.bot||'')
         +'&t='+Date.now();
       var img=new Image(); img.src=u;
     }catch(e){}

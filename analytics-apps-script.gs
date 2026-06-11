@@ -11,12 +11,12 @@
 // Порядок колонок у головному аркуші (Лог). Має збігатися з пінгом калькулятора.
 var ED_HEADERS = [
   'Час', 'Подія', 'Мітка', 'Сума',
-  'ID пристрою', 'Тип', 'Бот', 'ОС', 'Браузер',
+  'ID пристрою', 'Тип', 'ОС', 'Браузер',
   'Мова', 'Часовий пояс', 'Екран', 'Вікно', 'DPR',
   'Платформа', 'Ядра', "Пам'ять (GB)", 'Сенсор',
   'Джерело (referrer)', 'utm_source', 'utm_medium', 'utm_campaign',
   'Розблоковано', 'Код доступу', 'К-сть розрах.',
-  'IP', 'Країна', 'Регіон', 'Місто', 'Провайдер'
+  'IP', 'Країна', 'Регіон', 'Місто', 'Провайдер', 'Бот'
 ];
 
 var ED_LOG_SHEET = 'Лог';
@@ -60,12 +60,12 @@ function edHandle(e) {
 
     var row = [
       ts, p.event || '', p.label || '', p.value || '',
-      p.device || '', p.dev_type || '', bot, p.os || '', p.browser || '',
+      p.device || '', p.dev_type || '', p.os || '', p.browser || '',
       p.lang || '', p.tz || '', p.screen || '', p.viewport || '', p.dpr || '',
       p.platform || '', p.cores || '', p.mem || '', p.touch || '',
       p.ref || '', p.utm_source || '', p.utm_medium || '', p.utm_campaign || '',
       p.unlocked || '', p.code || '', p.calc_count || '',
-      p.ip || '', p.country || '', p.region || '', p.city || '', p.org || ''
+      p.ip || '', p.country || '', p.region || '', p.city || '', p.org || '', bot
     ];
 
     sheet.appendRow(row);
@@ -205,4 +205,24 @@ function edSetupDailyTrigger() {
   }
   ScriptApp.newTrigger('edBuildDashboard').timeBased().everyDays(1).atHour(8).create();
   edBuildDashboard();
+}
+
+/**
+ * Вставляє правильний рядок-заголовок зверху, НЕ видаляючи наявні дані.
+ * Запусти ОДИН раз, якщо в логу є дані, але немає шапки колонок.
+ */
+function edFixHeader() {
+  var sheet = edLogSheet();
+  var firstRow = sheet.getRange(1, 1).getValue();
+  // Якщо в A1 вже стоїть 'Час' — шапка є, нічого не робимо
+  if (firstRow === 'Час') {
+    SpreadsheetApp.getActiveSpreadsheet().toast('Шапка вже на місці', 'OK', 3);
+    return;
+  }
+  // Вставляємо новий порожній рядок зверху і заповнюємо заголовками
+  sheet.insertRowBefore(1);
+  sheet.getRange(1, 1, 1, ED_HEADERS.length).setValues([ED_HEADERS]);
+  sheet.setFrozenRows(1);
+  sheet.getRange(1, 1, 1, ED_HEADERS.length).setFontWeight('bold');
+  SpreadsheetApp.getActiveSpreadsheet().toast('Шапку додано', 'Готово', 3);
 }
